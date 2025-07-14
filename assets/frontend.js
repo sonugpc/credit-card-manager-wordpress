@@ -6,18 +6,11 @@
   "use strict";
 
   // Global variables
-  let cardsData = [];
-  let filtersData = {};
-  let currentPage = 1;
-  let totalPages = 1;
   let compareCards = [];
   const MAX_COMPARE_CARDS = 4;
 
   // DOM elements
   const $filterForm = $("#ccm-filter-form");
-  const $cardsGrid = $("#ccm-cards-grid");
-  const $pagination = $("#ccm-pagination");
-  const $totalCards = $("#ccm-total-cards");
   const $compareSection = $("#ccm-compare-section");
   const $compareCards = $("#ccm-compare-cards");
   const $compareCount = $("#ccm-compare-count");
@@ -34,51 +27,25 @@
    * Initialize the application
    */
   function init() {
-    // Load filters data
-    loadFilters();
-
-    // Load initial cards
-    loadCards();
-
     // Set up event listeners
     setupEventListeners();
+
+    // Initialize compare section
+    initializeCompareSection();
   }
 
   /**
    * Set up event listeners
    */
   function setupEventListeners() {
-    // Filter form submission
-    $filterForm.on("submit", function (e) {
-      e.preventDefault();
-      currentPage = 1;
-      loadCards();
-    });
-
     // Reset filters
     $filterReset.on("click", function () {
       $filterForm[0].reset();
-      currentPage = 1;
-      loadCards();
-    });
-
-    // Pagination clicks
-    $pagination.on("click", ".ccm-page-link", function (e) {
-      e.preventDefault();
-      currentPage = parseInt($(this).data("page"));
-      loadCards();
-
-      // Scroll to top of cards section
-      $("html, body").animate(
-        {
-          scrollTop: $(".ccm-cards-section").offset().top - 100,
-        },
-        500
-      );
+      window.location.href = window.location.pathname;
     });
 
     // Compare checkbox clicks
-    $cardsGrid.on("change", ".ccm-compare-input", function () {
+    $(document).on("change", ".ccm-compare-input", function () {
       const $this = $(this);
       const cardId = $this.data("id");
       const cardTitle = $this.data("title");
@@ -106,6 +73,9 @@
       }
 
       updateCompareSection();
+
+      // Store compare cards in localStorage
+      localStorage.setItem("ccm_compare_cards", JSON.stringify(compareCards));
     });
 
     // Remove card from compare
@@ -119,6 +89,9 @@
       compareCards = compareCards.filter((card) => card.id !== cardId);
 
       updateCompareSection();
+
+      // Update localStorage
+      localStorage.setItem("ccm_compare_cards", JSON.stringify(compareCards));
     });
 
     // Clear all compare cards
@@ -130,6 +103,9 @@
       compareCards = [];
 
       updateCompareSection();
+
+      // Clear localStorage
+      localStorage.removeItem("ccm_compare_cards");
     });
 
     // Compare button click
@@ -155,317 +131,38 @@
     $toggleFilters.on("click", function () {
       $filtersContainer.slideToggle(300);
     });
-  }
 
-  /**
-   * Load filters data from API
-   */
-  function loadFilters() {
-    $.ajax({
-      url: ccm_frontend.api_url + "credit-cards/filters",
-      method: "GET",
-      beforeSend: function (xhr) {
-        xhr.setRequestHeader("X-WP-Nonce", ccm_frontend.nonce);
-      },
-      success: function (response) {
-        filtersData = response;
-        populateFilters();
-      },
-      error: function (xhr) {
-        console.error("Error loading filters:", xhr);
-      },
-    });
-  }
-
-  /**
-   * Populate filter dropdowns
-   */
-  function populateFilters() {
-    // Banks
-    if (filtersData.banks && filtersData.banks.length) {
-      const $bankFilter = $("#ccm-bank-filter");
-      filtersData.banks.forEach(function (bank) {
-        $bankFilter.append(
-          $("<option></option>")
-            .val(bank.slug)
-            .text(bank.name + " (" + bank.count + ")")
-        );
-      });
-    }
-
-    // Network types
-    if (filtersData.network_types && filtersData.network_types.length) {
-      const $networkFilter = $("#ccm-network-filter");
-      filtersData.network_types.forEach(function (network) {
-        $networkFilter.append(
-          $("<option></option>")
-            .val(network.slug)
-            .text(network.name + " (" + network.count + ")")
-        );
-      });
-    }
-
-    // Categories
-    if (filtersData.categories && filtersData.categories.length) {
-      const $categoryFilter = $("#ccm-category-filter");
-      filtersData.categories.forEach(function (category) {
-        $categoryFilter.append(
-          $("<option></option>")
-            .val(category.slug)
-            .text(category.name + " (" + category.count + ")")
-        );
-      });
-    }
-  }
-
-  /**
-   * Load cards from API
-   */
-  function loadCards() {
-    // Show loading
-    $cardsGrid.html(
-      '<div class="ccm-loading"><span class="dashicons dashicons-update-alt ccm-spin"></span><p>Loading credit cards...</p></div>'
-    );
-
-    // Get filter values
-    const filterData = $filterForm.serialize() + "&page=" + currentPage;
-
-    $.ajax({
-      url: ccm_frontend.api_url + "credit-cards",
-      method: "GET",
-      data: filterData,
-      beforeSend: function (xhr) {
-        xhr.setRequestHeader("X-WP-Nonce", ccm_frontend.nonce);
-      },
-      success: function (response) {
-        cardsData = response.data;
-        totalPages = response.pagination.pages;
-        currentPage = response.pagination.current_page;
-
-        renderCards();
-        renderPagination();
-
-        // Update total count
-        $totalCards.text(response.pagination.total);
-      },
-      error: function (xhr) {
-        console.error("Error loading cards:", xhr);
-        $cardsGrid.html(
-          '<div class="ccm-no-results"><p>Error loading credit cards. Please try again.</p></div>'
-        );
-      },
-    });
-  }
-
-  /**
-   * Render cards to the grid
-   */
-  function renderCards() {
-    if (!cardsData.length) {
-      $cardsGrid.html(
-        '<div class="ccm-no-results"><p>No credit cards found matching your criteria.</p></div>'
-      );
-      return;
-    }
-
-    $cardsGrid.empty();
-
-    cardsData.forEach(function (card) {
-      // Calculate rating percentage for stars
-      const ratingPercent = (card.rating / 5) * 100;
-      card.rating_percent = ratingPercent;
-
-      // Use Mustache-like template rendering
-      let cardHtml = $("#ccm-card-template").html();
-
-      // Replace simple variables
-      cardHtml = cardHtml.replace(/\{\{id\}\}/g, card.id);
-      cardHtml = cardHtml.replace(/\{\{title\}\}/g, card.title);
-      cardHtml = cardHtml.replace(/\{\{link\}\}/g, card.link);
-      cardHtml = cardHtml.replace(/\{\{card_image\}\}/g, card.card_image);
-      cardHtml = cardHtml.replace(/\{\{rating\}\}/g, card.rating);
-      cardHtml = cardHtml.replace(
-        /\{\{rating_percent\}\}/g,
-        card.rating_percent
-      );
-
-      // Handle conditional sections
-      if (card.featured) {
-        cardHtml = cardHtml.replace(
-          /\{\{#featured\}\}([\s\S]*?)\{\{\/featured\}\}/g,
-          "$1"
-        );
-      } else {
-        cardHtml = cardHtml.replace(
-          /\{\{#featured\}\}([\s\S]*?)\{\{\/featured\}\}/g,
-          ""
-        );
-      }
-
-      if (card.trending) {
-        cardHtml = cardHtml.replace(
-          /\{\{#trending\}\}([\s\S]*?)\{\{\/trending\}\}/g,
-          "$1"
-        );
-      } else {
-        cardHtml = cardHtml.replace(
-          /\{\{#trending\}\}([\s\S]*?)\{\{\/trending\}\}/g,
-          ""
-        );
-      }
-
-      if (card.bank) {
-        cardHtml = cardHtml.replace(
-          /\{\{#bank\}\}([\s\S]*?)\{\{\/bank\}\}/g,
-          "$1"
-        );
-        cardHtml = cardHtml.replace(/\{\{bank\.name\}\}/g, card.bank.name);
-      } else {
-        cardHtml = cardHtml.replace(
-          /\{\{#bank\}\}([\s\S]*?)\{\{\/bank\}\}/g,
-          ""
-        );
-      }
-
-      if (card.review_count) {
-        cardHtml = cardHtml.replace(
-          /\{\{#review_count\}\}([\s\S]*?)\{\{\/review_count\}\}/g,
-          "$1"
-        );
-        cardHtml = cardHtml.replace(/\{\{review_count\}\}/g, card.review_count);
-      } else {
-        cardHtml = cardHtml.replace(
-          /\{\{#review_count\}\}([\s\S]*?)\{\{\/review_count\}\}/g,
-          ""
-        );
-      }
-
-      if (card.annual_fee) {
-        cardHtml = cardHtml.replace(
-          /\{\{#annual_fee\}\}([\s\S]*?)\{\{\/annual_fee\}\}/g,
-          "$1"
-        );
-        cardHtml = cardHtml.replace(/\{\{annual_fee\}\}/g, card.annual_fee);
-      } else {
-        cardHtml = cardHtml.replace(
-          /\{\{#annual_fee\}\}([\s\S]*?)\{\{\/annual_fee\}\}/g,
-          ""
-        );
-      }
-
-      if (card.cashback_rate) {
-        cardHtml = cardHtml.replace(
-          /\{\{#cashback_rate\}\}([\s\S]*?)\{\{\/cashback_rate\}\}/g,
-          "$1"
-        );
-        cardHtml = cardHtml.replace(
-          /\{\{cashback_rate\}\}/g,
-          card.cashback_rate
-        );
-      } else {
-        cardHtml = cardHtml.replace(
-          /\{\{#cashback_rate\}\}([\s\S]*?)\{\{\/cashback_rate\}\}/g,
-          ""
-        );
-      }
-
-      if (card.welcome_bonus) {
-        cardHtml = cardHtml.replace(
-          /\{\{#welcome_bonus\}\}([\s\S]*?)\{\{\/welcome_bonus\}\}/g,
-          "$1"
-        );
-        cardHtml = cardHtml.replace(
-          /\{\{welcome_bonus\}\}/g,
-          card.welcome_bonus
-        );
-      } else {
-        cardHtml = cardHtml.replace(
-          /\{\{#welcome_bonus\}\}([\s\S]*?)\{\{\/welcome_bonus\}\}/g,
-          ""
-        );
-      }
-
-      if (card.excerpt) {
-        cardHtml = cardHtml.replace(
-          /\{\{#excerpt\}\}([\s\S]*?)\{\{\/excerpt\}\}/g,
-          "$1"
-        );
-        cardHtml = cardHtml.replace(/\{\{excerpt\}\}/g, card.excerpt);
-      } else {
-        cardHtml = cardHtml.replace(
-          /\{\{#excerpt\}\}([\s\S]*?)\{\{\/excerpt\}\}/g,
-          ""
-        );
-      }
-
-      if (card.apply_link) {
-        cardHtml = cardHtml.replace(
-          /\{\{#apply_link\}\}([\s\S]*?)\{\{\/apply_link\}\}/g,
-          "$1"
-        );
-        cardHtml = cardHtml.replace(/\{\{apply_link\}\}/g, card.apply_link);
-      } else {
-        cardHtml = cardHtml.replace(
-          /\{\{#apply_link\}\}([\s\S]*?)\{\{\/apply_link\}\}/g,
-          ""
-        );
-      }
-
-      $cardsGrid.append(cardHtml);
-
-      // Check if card is in compare list and check the checkbox
-      if (compareCards.some((compareCard) => compareCard.id === card.id)) {
-        $('.ccm-compare-input[data-id="' + card.id + '"]').prop(
-          "checked",
-          true
-        );
+    // Close modal with ESC key
+    $(document).on("keydown", function (e) {
+      if (e.key === "Escape" && $compareModal.is(":visible")) {
+        $compareModal.hide();
       }
     });
   }
 
   /**
-   * Render pagination
+   * Initialize compare section from localStorage
    */
-  function renderPagination() {
-    $pagination.empty();
+  function initializeCompareSection() {
+    // Try to load compare cards from localStorage
+    const savedCards = localStorage.getItem("ccm_compare_cards");
+    if (savedCards) {
+      try {
+        compareCards = JSON.parse(savedCards);
 
-    if (totalPages <= 1) {
-      return;
-    }
+        // Check boxes for saved cards
+        compareCards.forEach(function (card) {
+          $('.ccm-compare-input[data-id="' + card.id + '"]').prop(
+            "checked",
+            true
+          );
+        });
 
-    // Previous button
-    if (currentPage > 1) {
-      $pagination.append(
-        '<a href="#" class="ccm-page-link" data-page="' +
-          (currentPage - 1) +
-          '">&laquo;</a>'
-      );
-    }
-
-    // Page numbers
-    const startPage = Math.max(1, currentPage - 2);
-    const endPage = Math.min(totalPages, currentPage + 2);
-
-    for (let i = startPage; i <= endPage; i++) {
-      const activeClass = i === currentPage ? " ccm-current" : "";
-      $pagination.append(
-        '<a href="#" class="ccm-page-link' +
-          activeClass +
-          '" data-page="' +
-          i +
-          '">' +
-          i +
-          "</a>"
-      );
-    }
-
-    // Next button
-    if (currentPage < totalPages) {
-      $pagination.append(
-        '<a href="#" class="ccm-page-link" data-page="' +
-          (currentPage + 1) +
-          '">&raquo;</a>'
-      );
+        updateCompareSection();
+      } catch (e) {
+        console.error("Error loading saved compare cards:", e);
+        localStorage.removeItem("ccm_compare_cards");
+      }
     }
   }
 
@@ -504,28 +201,68 @@
    * Show compare modal
    */
   function showCompareModal() {
-    // Get full data for selected cards
-    const cardIds = compareCards.map((card) => card.id);
-    const selectedCards = [];
-
-    // Find cards in cardsData
-    cardIds.forEach(function (id) {
-      const card = cardsData.find((card) => card.id === id);
-      if (card) {
-        selectedCards.push(card);
-      }
-    });
-
-    if (selectedCards.length < 2) {
+    if (compareCards.length < 2) {
       alert("Please select at least 2 cards to compare.");
       return;
     }
 
-    // Build comparison table
-    buildComparisonTable(selectedCards);
+    // Fetch card data for comparison
+    fetchCardDataForComparison();
+  }
 
-    // Show modal
+  /**
+   * Fetch card data for comparison
+   */
+  function fetchCardDataForComparison() {
+    // Show loading in modal
+    $comparisonTable.html(
+      '<tr><td colspan="' +
+        (compareCards.length + 1) +
+        '" style="text-align: center; padding: 30px;"><span class="dashicons dashicons-update-alt ccm-spin" style="font-size: 2rem; margin-bottom: 15px;"></span><p>Loading comparison data...</p></td></tr>'
+    );
     $compareModal.show();
+
+    // Get card IDs
+    const cardIds = compareCards.map((card) => card.id);
+
+    // Fetch data for each card
+    const promises = cardIds.map((id) => {
+      return $.ajax({
+        url: ccm_frontend.api_url + "credit-cards/" + id,
+        method: "GET",
+        beforeSend: function (xhr) {
+          xhr.setRequestHeader("X-WP-Nonce", ccm_frontend.nonce);
+        },
+      });
+    });
+
+    // When all data is fetched
+    $.when
+      .apply($, promises)
+      .then(function () {
+        // Convert arguments to array of card data
+        const cards = [];
+
+        // Handle single card case differently
+        if (promises.length === 1) {
+          cards.push(arguments[0]);
+        } else {
+          // Multiple cards
+          for (let i = 0; i < arguments.length; i++) {
+            cards.push(arguments[i][0]);
+          }
+        }
+
+        // Build comparison table
+        buildComparisonTable(cards);
+      })
+      .fail(function () {
+        $comparisonTable.html(
+          '<tr><td colspan="' +
+            (compareCards.length + 1) +
+            '" style="text-align: center; padding: 30px; color: #ef4444;"><span class="dashicons dashicons-warning" style="font-size: 2rem; margin-bottom: 15px;"></span><p>Error loading comparison data. Please try again.</p></td></tr>'
+        );
+      });
   }
 
   /**
@@ -736,6 +473,24 @@
     });
     consHtml += "</tr>";
     $comparisonTable.append(consHtml);
+
+    // Best For
+    let bestForHtml = "<tr><td>Best For</td>";
+    cards.forEach(function (card) {
+      bestForHtml += "<td>";
+      if (card.best_for && card.best_for.length) {
+        bestForHtml += "<ul>";
+        card.best_for.forEach(function (item) {
+          bestForHtml += "<li>" + item + "</li>";
+        });
+        bestForHtml += "</ul>";
+      } else {
+        bestForHtml += "-";
+      }
+      bestForHtml += "</td>";
+    });
+    bestForHtml += "</tr>";
+    $comparisonTable.append(bestForHtml);
   }
 
   // Initialize when document is ready

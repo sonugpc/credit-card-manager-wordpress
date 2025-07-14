@@ -183,6 +183,128 @@ class CreditCardManager {
             wp_insert_term('Discover', 'network-type');
             wp_insert_term('RuPay', 'network-type');
         }
+        
+        // Store/Bank Taxonomy
+        $store_labels = array(
+            'name'              => _x('Banks/Stores', 'taxonomy general name', 'credit-card-manager'),
+            'singular_name'     => _x('Bank/Store', 'taxonomy singular name', 'credit-card-manager'),
+            'search_items'      => __('Search Banks/Stores', 'credit-card-manager'),
+            'all_items'         => __('All Banks/Stores', 'credit-card-manager'),
+            'parent_item'       => __('Parent Bank/Store', 'credit-card-manager'),
+            'parent_item_colon' => __('Parent Bank/Store:', 'credit-card-manager'),
+            'edit_item'         => __('Edit Bank/Store', 'credit-card-manager'),
+            'update_item'       => __('Update Bank/Store', 'credit-card-manager'),
+            'add_new_item'      => __('Add New Bank/Store', 'credit-card-manager'),
+            'new_item_name'     => __('New Bank/Store Name', 'credit-card-manager'),
+            'menu_name'         => __('Banks/Stores', 'credit-card-manager'),
+        );
+        
+        $store_args = array(
+            'hierarchical'      => true,
+            'labels'            => $store_labels,
+            'show_ui'           => true,
+            'show_admin_column' => true,
+            'show_in_rest'      => true,
+            'rest_base'         => 'stores',
+            'query_var'         => true,
+            'rewrite'           => array('slug' => 'store'),
+        );
+        
+        register_taxonomy('store', array('credit-card'), $store_args);
+        
+        // Card Category Taxonomy with Icon Support
+        $category_labels = array(
+            'name'              => _x('Card Categories', 'taxonomy general name', 'credit-card-manager'),
+            'singular_name'     => _x('Card Category', 'taxonomy singular name', 'credit-card-manager'),
+            'search_items'      => __('Search Card Categories', 'credit-card-manager'),
+            'all_items'         => __('All Card Categories', 'credit-card-manager'),
+            'parent_item'       => __('Parent Card Category', 'credit-card-manager'),
+            'parent_item_colon' => __('Parent Card Category:', 'credit-card-manager'),
+            'edit_item'         => __('Edit Card Category', 'credit-card-manager'),
+            'update_item'       => __('Update Card Category', 'credit-card-manager'),
+            'add_new_item'      => __('Add New Card Category', 'credit-card-manager'),
+            'new_item_name'     => __('New Card Category Name', 'credit-card-manager'),
+            'menu_name'         => __('Card Categories', 'credit-card-manager'),
+        );
+        
+        $category_args = array(
+            'hierarchical'      => true,
+            'labels'            => $category_labels,
+            'show_ui'           => true,
+            'show_admin_column' => true,
+            'show_in_rest'      => true,
+            'rest_base'         => 'card-categories',
+            'query_var'         => true,
+            'rewrite'           => array('slug' => 'card-category'),
+        );
+        
+        register_taxonomy('card-category', array('credit-card'), $category_args);
+        
+        // Add default card categories
+        if (!term_exists('Rewards', 'card-category')) {
+            wp_insert_term('Rewards', 'card-category');
+            wp_insert_term('Cashback', 'card-category');
+            wp_insert_term('Travel', 'card-category');
+            wp_insert_term('Fuel', 'card-category');
+            wp_insert_term('Lifestyle', 'card-category');
+            wp_insert_term('Shopping', 'card-category');
+            wp_insert_term('Business', 'card-category');
+            wp_insert_term('Student', 'card-category');
+            wp_insert_term('Secured', 'card-category');
+            wp_insert_term('Premium', 'card-category');
+        }
+        
+        // Add icon field to card-category taxonomy
+        add_action('card-category_add_form_fields', array($this, 'add_category_icon_field'));
+        add_action('card-category_edit_form_fields', array($this, 'edit_category_icon_field'), 10, 2);
+        add_action('created_card-category', array($this, 'save_category_icon_field'));
+        add_action('edited_card-category', array($this, 'save_category_icon_field'));
+    }
+    
+    /**
+     * Add Category Icon Field
+     */
+    public function add_category_icon_field() {
+        ?>
+        <div class="form-field">
+            <label for="category_icon"><?php _e('Category Icon', 'credit-card-manager'); ?></label>
+            <textarea name="category_icon" id="category_icon" rows="5" placeholder="<?php _e('Enter SVG code, base64 encoded image, or icon class', 'credit-card-manager'); ?>"></textarea>
+            <p class="description"><?php _e('Add an icon for this category. You can use SVG code, base64 encoded image, or a CSS class name.', 'credit-card-manager'); ?></p>
+        </div>
+        <?php
+    }
+    
+    /**
+     * Edit Category Icon Field
+     */
+    public function edit_category_icon_field($term, $taxonomy) {
+        $icon = get_term_meta($term->term_id, 'category_icon', true);
+        ?>
+        <tr class="form-field">
+            <th scope="row">
+                <label for="category_icon"><?php _e('Category Icon', 'credit-card-manager'); ?></label>
+            </th>
+            <td>
+                <textarea name="category_icon" id="category_icon" rows="5"><?php echo esc_textarea($icon); ?></textarea>
+                <p class="description"><?php _e('Add an icon for this category. You can use SVG code, base64 encoded image, or a CSS class name.', 'credit-card-manager'); ?></p>
+                <?php if (!empty($icon)): ?>
+                <div class="icon-preview" style="margin-top: 10px; padding: 10px; border: 1px solid #ddd; display: inline-block;">
+                    <strong><?php _e('Icon Preview:', 'credit-card-manager'); ?></strong><br>
+                    <?php echo $icon; ?>
+                </div>
+                <?php endif; ?>
+            </td>
+        </tr>
+        <?php
+    }
+    
+    /**
+     * Save Category Icon Field
+     */
+    public function save_category_icon_field($term_id) {
+        if (isset($_POST['category_icon'])) {
+            update_term_meta($term_id, 'category_icon', $_POST['category_icon']);
+        }
     }
     
  /**

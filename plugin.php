@@ -22,13 +22,29 @@ function load_credit_card_templates_from_plugin($template) {
     }
 
     if (is_post_type_archive($post_type)) {
-        $archive_template = plugin_dir_path(__FILE__) . "templates/archive-{$post_type}.php";
+        $archive_template = plugin_dir_path(__FILE__) . "templates/archive-credit-card.php";
         if (file_exists($archive_template)) {
             return $archive_template;
         }
     }
 
+    // Check for template by name (for custom pages using our template)
+    $template_name = basename($template);
+    if ($template_name == 'archive-credit-card.php') {
+        $custom_template = plugin_dir_path(__FILE__) . "templates/archive-credit-card.php";
+        if (file_exists($custom_template)) {
+            return $custom_template;
+        }
+    }
+
     return $template;
+}
+
+// Add a template for the archive page
+add_filter('theme_page_templates', 'ccm_add_archive_template');
+function ccm_add_archive_template($templates) {
+    $templates['templates/archive-credit-card.php'] = __('Credit Card Archive', 'credit-card-manager');
+    return $templates;
 }
 
 
@@ -1516,33 +1532,36 @@ if (is_wp_error($categories)) $categories = array();
        }
    }
    
-   /**
-    * Frontend Scripts
-    */
-   public function frontend_scripts() {
-       if (is_singular('credit-card') || is_post_type_archive('credit-card')) {
-           wp_enqueue_script(
-               'credit-card-frontend',
-               plugin_dir_url(__FILE__) . 'assets/frontend.js',
-               array('jquery'),
-               $this->version,
-               true
-           );
-           
-           wp_enqueue_style(
-               'credit-card-frontend',
-               plugin_dir_url(__FILE__) . 'assets/frontend.css',
-               array(),
-               $this->version
-           );
-           
-           wp_localize_script('credit-card-frontend', 'ccm_frontend', array(
-               'ajax_url' => admin_url('admin-ajax.php'),
-               'api_url' => rest_url('ccm/v1/'),
-               'nonce' => wp_create_nonce('wp_rest'),
-           ));
-       }
-   }
+    /**
+     * Frontend Scripts
+     */
+    public function frontend_scripts() {
+        if (is_singular('credit-card') || is_post_type_archive('credit-card') || is_page_template('templates/archive-credit-card.php')) {
+            // Enqueue dashicons for star ratings and icons
+            wp_enqueue_style('dashicons');
+            
+            wp_enqueue_script(
+                'credit-card-frontend',
+                plugin_dir_url(__FILE__) . 'assets/frontend.js',
+                array('jquery'),
+                $this->version,
+                true
+            );
+            
+            wp_enqueue_style(
+                'credit-card-frontend',
+                plugin_dir_url(__FILE__) . 'assets/frontend.css',
+                array(),
+                $this->version
+            );
+            
+            wp_localize_script('credit-card-frontend', 'ccm_frontend', array(
+                'ajax_url' => admin_url('admin-ajax.php'),
+                'api_url' => rest_url('ccm/v1/'),
+                'nonce' => wp_create_nonce('wp_rest'),
+            ));
+        }
+    }
    
    /**
     * Sanitization Functions

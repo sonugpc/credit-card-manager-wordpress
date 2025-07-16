@@ -1,0 +1,215 @@
+/* Archive Template Specific Styles */
+
+/* Container */
+.ccm-archive-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+/* Hero Section */
+.ccm-hero-section {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border-radius: 0.75rem;
+    padding: 40px;
+    margin-bottom: 40px;
+    overflow: hidden;
+}
+
+.ccm-hero-content {
+    flex: 1;
+    padding-right: 40px;
+}
+
+.ccm-hero-title {
+    font-size: 2.5rem;
+    color: #1e40af;
+    margin-bottom: 20px;
+    line-height: 1.2;
+}
+
+.ccm-hero-description {
+    font-size: 1.1rem;
+    color: #4b5563;
+    line-height: 1.6;
+}
+
+.ccm-hero-image {
+    flex: 1;
+    text-align: center;
+}
+
+.ccm-hero-image img {
+    max-width: 100%;
+    height: auto;
+    max-height: 300px;
+}
+
+/* Category Icons Section */
+.ccm-category-section {
+    margin-bottom: 40px;
+}
+
+.ccm-section-title {
+    font-size: 1.8rem;
+    color: #1e293b;
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+.ccm-category-icons {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 20px;
+}
+
+.ccm-category-icon-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 150px;
+    text-decoration: none;
+    color: #1e293b;
+    transition: transform 0.2s;
+}
+
+.ccm-category-icon-item:hover {
+    transform: translateY(-5px);
+}
+
+.ccm-category-icon {
+    width: 80px;
+    height: 80px;
+    background-color: #f1f5f9;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 10px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+}
+
+.ccm-category-icon svg {
+    width: 40px;
+    height: 40px;
+}
+
+.ccm-category-icon .dashicons {
+    font-size: 40px;
+    width: 40px;
+    height: 40px;
+    color: #1e40af;
+}
+
+.ccm-category-name {
+    font-size: 0.9rem;
+    font-weight: 500;
+    text-align: center;
+}
+
+/* Banks Section */
+.ccm-banks-section {
+    margin-bottom: 40px;
+}
+
+.ccm-banks-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 15px;
+}
+
+.ccm-bank-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    background-color: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.75rem;
+    text-decoration: none;
+    color: #1f2937;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.ccm-bank-item:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+.ccm-bank-name {
+    font-size: 1rem;
+    font-weight: 600;
+    margin-bottom: 5px;
+    text-align: center;
+}
+
+.ccm-bank-count {
+    font-size: 0.8rem;
+    color: #6b7280;
+}
+
+/* Archive Header */
+.ccm-archive-header {
+    background-color: #3b82f6;
+    color: white;
+    padding: 3rem 0;
+    text-align: center;
+    margin-bottom: 2rem;
+    border-radius: 0.75rem;
+}
+
+.ccm-archive-title {
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin: 0 0 1rem;
+}
+
+.ccm-archive-description {
+    font-size: 1.125rem;
+    max-width: 800px;
+    margin: 0 auto;
+    opacity: 0.9;
+}
+
+/* Archive Content */
+.ccm-archive-content {
+    margin-bottom: 3rem;
+}
+
+/* Responsive Styles */
+@media (max-width: 768px) {
+    .ccm-hero-section {
+        flex-direction: column;
+        padding: 30px 20px;
+    }
+    
+    .ccm-hero-content {
+        padding-right: 0;
+        margin-bottom: 30px;
+    }
+    
+    .ccm-hero-title {
+        font-size: 2rem;
+    }
+    
+    .ccm-category-icons {
+        gap: 10px;
+    }
+    
+    .ccm-category-icon-item {
+        width: 120px;
+    }
+    
+    .ccm-banks-grid {
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    }
+    
+    .ccm-archive-container {
+        padding: 15px;
+    }
+}

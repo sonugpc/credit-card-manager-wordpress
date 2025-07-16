@@ -53,8 +53,9 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-// Include API functions
+// Include all necessary files
 require_once plugin_dir_path(__FILE__) . 'includes/api.php';
+require_once plugin_dir_path(__FILE__) . 'includes/assets.php';
 
 class CreditCardManager {
     
@@ -63,8 +64,6 @@ class CreditCardManager {
     public function __construct() {
         add_action('init', array($this, 'init'));
         add_action('rest_api_init', array($this, 'register_rest_routes'));
-        add_action('admin_enqueue_scripts', array($this, 'admin_scripts'));
-        add_action('wp_enqueue_scripts', array($this, 'frontend_scripts'));
         
         // Add meta box
         add_action('add_meta_boxes', array($this, 'add_meta_boxes'));
@@ -1631,59 +1630,6 @@ if (is_wp_error($categories)) $categories = array();
        return $args;
    }
    
-   /**
-    * Admin Scripts
-    */
-   public function admin_scripts($hook) {
-       global $post_type;
-       
-       if ($post_type === 'credit-card' && ($hook === 'post.php' || $hook === 'post-new.php')) {
-           wp_enqueue_media();
-           wp_enqueue_script(
-               'credit-card-admin',
-               plugin_dir_url(__FILE__) . 'assets/admin.js',
-               array('jquery'),
-               $this->version,
-               true
-           );
-           
-           wp_localize_script('credit-card-admin', 'ccm_admin', array(
-               'ajax_url' => admin_url('admin-ajax.php'),
-               'nonce' => wp_create_nonce('ccm_admin_nonce'),
-           ));
-       }
-   }
-   
-    /**
-     * Frontend Scripts
-     */
-    public function frontend_scripts() {
-        if (is_singular('credit-card') || is_post_type_archive('credit-card') || is_page_template('templates/archive-credit-card.php')) {
-            // Enqueue dashicons for star ratings and icons
-            wp_enqueue_style('dashicons');
-            
-            wp_enqueue_script(
-                'credit-card-frontend',
-                plugin_dir_url(__FILE__) . 'assets/frontend.js',
-                array('jquery'),
-                $this->version,
-                true
-            );
-            
-            wp_enqueue_style(
-                'credit-card-frontend',
-                plugin_dir_url(__FILE__) . 'assets/frontend.css',
-                array(),
-                $this->version
-            );
-            
-            wp_localize_script('credit-card-frontend', 'ccm_frontend', array(
-                'ajax_url' => admin_url('admin-ajax.php'),
-                'api_url' => rest_url('ccm/v1/'),
-                'nonce' => wp_create_nonce('wp_rest'),
-            ));
-        }
-    }
    
    /**
     * Sanitization Functions

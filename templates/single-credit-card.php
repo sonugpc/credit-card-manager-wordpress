@@ -13,77 +13,56 @@ $post_id = get_the_ID();
 $meta = get_post_meta($post_id);
 $card_name = get_the_title();
 
-// Helper function to safely get meta values
-function get_cc_meta($key, $default = '', $is_numeric = false, $unserialize = false) {
-    global $meta;
-    $value = isset($meta[$key][0]) ? $meta[$key][0] : $default;
-    if ($unserialize) {
-        return maybe_unserialize($value) ?: $default;
+// Helper function for rupee formatting (local override)
+function format_rupees($amount) {
+    if (!is_numeric($amount)) {
+        return $amount;
     }
-    return $is_numeric ? (is_numeric($value) ? $value : $default) : $value;
+    return '₹' . number_format($amount);
 }
 
 // --- Assign all variables ---
-$rating = get_cc_meta('rating', 0, true);
-$review_count = get_cc_meta('review_count', 0, true);
-$annual_fee = get_cc_meta('annual_fee', 'N/A');
-$joining_fee = get_cc_meta('joining_fee', 'N/A');
-$welcome_bonus = get_cc_meta('welcome_bonus', 'N/A');
-$credit_limit = get_cc_meta('credit_limit', 'N/A');
-$processing_time = get_cc_meta('processing_time', 'N/A');
-$min_income = get_cc_meta('min_income', 'N/A');
-$apply_link = esc_url(get_cc_meta('apply_link', '#'));
-$trending = (bool) get_cc_meta('trending', false);
+$rating = ccm_get_meta($post_id, 'rating', 0, true);
+$review_count = ccm_get_meta($post_id, 'review_count', 0, true);
+$annual_fee = ccm_get_meta($post_id, 'annual_fee', 0, true);
+$joining_fee = ccm_get_meta($post_id, 'joining_fee', 0, true);
+$welcome_bonus = ccm_get_meta($post_id, 'welcome_bonus', 'N/A');
+$credit_limit = ccm_get_meta($post_id, 'credit_limit', 'N/A');
+$processing_time = ccm_get_meta($post_id, 'processing_time', 'N/A');
+$min_income = ccm_get_meta($post_id, 'min_income', 'N/A');
+$apply_link = esc_url(ccm_get_meta($post_id, 'apply_link', '#'));
+$trending = (bool) ccm_get_meta($post_id, 'trending', false);
 
 // Design & Color
-$gradient_class = get_cc_meta('gradient', 'from-gray-700 to-gray-900'); // Default gradient
-$theme_color = get_cc_meta('theme_color', '#1e40af');
+$gradient_class = ccm_get_meta($post_id, 'gradient', 'from-gray-700 to-gray-900'); // Default gradient
+$theme_color = ccm_get_meta($post_id, 'theme_color', '#1e40af');
 
 // Scores
-$overall_score = get_cc_meta('overall_score', 0, true);
-$reward_score = get_cc_meta('reward_score', 0, true);
-$fees_score = get_cc_meta('fees_score', 0, true);
-$benefits_score = get_cc_meta('benefits_score', 0, true);
-$support_score = get_cc_meta('support_score', 0, true);
+$overall_score = ccm_get_meta($post_id, 'overall_score', 0, true);
+$reward_score = ccm_get_meta($post_id, 'reward_score', 0, true);
+$fees_score = ccm_get_meta($post_id, 'fees_score', 0, true);
+$benefits_score = ccm_get_meta($post_id, 'benefits_score', 0, true);
+$support_score = ccm_get_meta($post_id, 'support_score', 0, true);
 
 // Array data
-$pros = get_cc_meta('pros', [], false, true);
-$cons = get_cc_meta('cons', [], false, true);
-$best_for = get_cc_meta('best_for', [], false, true);
-$features = get_cc_meta('features', [], false, true);
-$rewards = get_cc_meta('rewards', [], false, true);
-$fees = get_cc_meta('fees', [], false, true);
-$eligibility = get_cc_meta('eligibility', [], false, true);
-$documents = get_cc_meta('documents', [], false, true);
+$pros = ccm_get_meta($post_id, 'pros', [], false, true);
+$cons = ccm_get_meta($post_id, 'cons', [], false, true);
+$best_for = ccm_get_meta($post_id, 'best_for', [], false, true);
+$features = ccm_get_meta($post_id, 'features', [], false, true);
+$rewards = ccm_get_meta($post_id, 'rewards', [], false, true);
+$fees = ccm_get_meta($post_id, 'fees', [], false, true);
+$eligibility = ccm_get_meta($post_id, 'eligibility', [], false, true);
+$documents = ccm_get_meta($post_id, 'documents', [], false, true);
 
 // Get Network Type taxonomy
 $network_terms = get_the_terms($post_id, 'network-type');
-$network_type = !is_wp_error($network_terms) && !empty($network_terms) ? $network_terms[0]->name : 'N/A';
-
-// --- SVG Icons ---
-function get_cc_icon($name, $classes = '') {
-    $icons = [
-        'star' => '<svg class="'.$classes.'" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M12 .587l3.668 7.568 8.332 1.151-6.064 5.828 1.48 8.279-7.416-3.967-7.417 3.967 1.481-8.279-6.064-5.828 8.332-1.151z"/></svg>',
-        'zap' => '<svg class="'.$classes.'" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>',
-        'credit-card' => '<svg class="'.$classes.'" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect><line x1="1" y1="10" x2="23" y2="10"></line></svg>',
-        'gift' => '<svg class="'.$classes.'" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 12 20 22 4 22 4 12"></polyline><rect x="2" y="7" width="20" height="5"></rect><line x1="12" y1="22" x2="12" y2="7"></line><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"></path><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"></path></svg>',
-        'calculator' => '<svg class="'.$classes.'" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2" ry="2"></rect><line x1="8" y1="6" x2="16" y2="6"></line><line x1="16" y1="14" x2="16" y2="18"></line><line x1="12" y1="14" x2="12" y2="18"></line><line x1="8" y1="14" x2="8" y2="18"></line><line x1="12" y1="10" x2="12" y2="10"></line></svg>',
-        'overview' => '<svg class="'.$classes.'" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"></path><path d="M22 12A10 10 0 0 0 12 2v10z"></path></svg>',
-        'features' => '<svg class="'.$classes.'" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 12.5l3-3 3 3 3-3 3 3 3-3"></path><path d="M4.5 18.5l3-3 3 3 3-3 3 3 3-3"></path></svg>',
-        'rewards' => '<svg class="'.$classes.'" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="7"></circle><polyline points="8.21 13.89 7 23 12 17 17 23 15.79 13.88"></polyline></svg>',
-        'fees' => '<svg class="'.$classes.'" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>',
-        'eligibility' => '<svg class="'.$classes.'" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"></path></svg>',
-        'check-circle' => '<svg class="'.$classes.'" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>',
-        'x-circle' => '<svg class="'.$classes.'" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>',
-        'target' => '<svg class="'.$classes.'" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="6"></circle><circle cx="12" cy="12" r="2"></circle></svg>',
-        'wallet' => '<svg class="'.$classes.'" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12V8a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4"></path><path d="M20 12H8v-2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v2z"></path></svg>',
-        'clock' => '<svg class="'.$classes.'" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>',
-        'trending-up' => '<svg class="'.$classes.'" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline></svg>',
-        'file-text' => '<svg class="'.$classes.'" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>',
-        'arrow-right' => '<svg class="'.$classes.'" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>',
-    ];
-    return isset($icons[$name]) ? $icons[$name] : '';
+if (!is_wp_error($network_terms) && !empty($network_terms)) {
+    $network_names = wp_list_pluck($network_terms, 'name');
+    $network_type = implode(', ', $network_names);
+} else {
+    $network_type = 'N/A';
 }
+
 ?>
 
 <style>
@@ -202,12 +181,12 @@ function get_cc_icon($name, $classes = '') {
                             <p><?php echo esc_html($card_name); ?></p>
                             <div class="cc-rating-trending">
                                 <div class="cc-rating">
-                                    <?php echo get_cc_icon('star', 'icon'); ?>
+                                    <?php echo ccm_get_icon('star', 'icon'); ?>
                                     <span><?php echo esc_html($rating); ?> (<?php echo esc_html($review_count); ?> reviews)</span>
                                 </div>
                                 <?php if ($trending) : ?>
                                 <div class="cc-trending-badge">
-                                    <?php echo get_cc_icon('zap', 'icon'); ?>
+                                    <?php echo ccm_get_icon('zap', 'icon'); ?>
                                     <span>TRENDING</span>
                                 </div>
                                 <?php endif; ?>
@@ -217,11 +196,11 @@ function get_cc_icon($name, $classes = '') {
 
                     <div class="cc-hero-stats">
                         <div class="cc-stat-box">
-                            <div class="label"><?php echo get_cc_icon('credit-card', 'icon'); ?><span>Annual Fee</span></div>
-                            <p class="value"><?php echo esc_html($annual_fee); ?></p>
+                            <div class="label"><?php echo ccm_get_icon('credit-card', 'icon'); ?><span>Annual Fee</span></div>
+                            <p class="value"><?php echo esc_html(format_rupees($annual_fee)); ?></p>
                         </div>
                         <div class="cc-stat-box">
-                            <div class="label"><?php echo get_cc_icon('gift', 'icon'); ?><span>Welcome Bonus</span></div>
+                            <div class="label"><?php echo ccm_get_icon('gift', 'icon'); ?><span>Welcome Bonus</span></div>
                             <p class="value"><?php echo esc_html($welcome_bonus); ?></p>
                         </div>
                     </div>
@@ -245,11 +224,11 @@ function get_cc_icon($name, $classes = '') {
             <div class="cc-actions-bar">
                 <div class="cc-actions-bar-inner">
                     <a href="<?php echo $apply_link; ?>" target="_blank" rel="noopener sponsored" class="cc-btn cc-btn-primary">
-                        <?php echo get_cc_icon('zap', 'icon'); ?>
+                        <?php echo ccm_get_icon('zap', 'icon'); ?>
                         <span>Apply Now</span>
                     </a>
                     <button class="cc-btn cc-btn-secondary" onclick="alert('Calculator feature coming soon!');">
-                        <?php echo get_cc_icon('calculator', 'icon'); ?>
+                        <?php echo ccm_get_icon('calculator', 'icon'); ?>
                         <span>Calculator</span>
                     </button>
                 </div>
@@ -258,11 +237,11 @@ function get_cc_icon($name, $classes = '') {
             <!-- TABS NAVIGATION -->
             <div class="cc-tabs-nav">
                 <div class="cc-tabs-nav-inner">
-                    <button class="cc-tab-link active" data-tab="overview"><?php echo get_cc_icon('overview', 'icon'); ?><span>Overview</span></button>
-                    <button class="cc-tab-link" data-tab="features"><?php echo get_cc_icon('features', 'icon'); ?><span>Features</span></button>
-                    <button class="cc-tab-link" data-tab="rewards"><?php echo get_cc_icon('rewards', 'icon'); ?><span>Rewards</span></button>
-                    <button class="cc-tab-link" data-tab="fees"><?php echo get_cc_icon('fees', 'icon'); ?><span>Fees</span></button>
-                    <button class="cc-tab-link" data-tab="eligibility"><?php echo get_cc_icon('eligibility', 'icon'); ?><span>Eligibility</span></button>
+                    <button class="cc-tab-link active" data-tab="overview"><?php echo ccm_get_icon('overview', 'icon'); ?><span>Overview</span></button>
+                    <button class="cc-tab-link" data-tab="features"><?php echo ccm_get_icon('features', 'icon'); ?><span>Features</span></button>
+                    <button class="cc-tab-link" data-tab="rewards"><?php echo ccm_get_icon('rewards', 'icon'); ?><span>Rewards</span></button>
+                    <button class="cc-tab-link" data-tab="fees"><?php echo ccm_get_icon('fees', 'icon'); ?><span>Fees</span></button>
+                    <button class="cc-tab-link" data-tab="eligibility"><?php echo ccm_get_icon('eligibility', 'icon'); ?><span>Eligibility</span></button>
                 </div>
             </div>
 
@@ -273,29 +252,29 @@ function get_cc_icon($name, $classes = '') {
                     <div class="cc-section">
                         <h3 class="cc-section-title">Quick Overview</h3>
                         <div class="cc-overview-grid">
-                            <div class="cc-overview-item"><?php echo get_cc_icon('credit-card', 'icon'); ?><p class="label">Network</p><p class="value"><?php echo esc_html($network_type); ?></p></div>
-                            <div class="cc-overview-item"><?php echo get_cc_icon('wallet', 'icon'); ?><p class="label">Credit Limit</p><p class="value"><?php echo esc_html($credit_limit); ?></p></div>
-                            <div class="cc-overview-item"><?php echo get_cc_icon('clock', 'icon'); ?><p class="label">Processing Time</p><p class="value"><?php echo esc_html($processing_time); ?></p></div>
-                            <div class="cc-overview-item"><?php echo get_cc_icon('trending-up', 'icon'); ?><p class="label">Min Income</p><p class="value"><?php echo esc_html($min_income); ?></p></div>
+                            <div class="cc-overview-item"><?php echo ccm_get_icon('credit-card', 'icon'); ?><p class="label">Network</p><p class="value"><?php echo esc_html($network_type); ?></p></div>
+                            <div class="cc-overview-item"><?php echo ccm_get_icon('wallet', 'icon'); ?><p class="label">Credit Limit</p><p class="value"><?php echo esc_html($credit_limit); ?></p></div>
+                            <div class="cc-overview-item"><?php echo ccm_get_icon('clock', 'icon'); ?><p class="label">Processing Time</p><p class="value"><?php echo esc_html($processing_time); ?></p></div>
+                            <div class="cc-overview-item"><?php echo ccm_get_icon('trending-up', 'icon'); ?><p class="label">Min Income</p><p class="value"><?php echo esc_html($min_income); ?></p></div>
                         </div>
                     </div>
                     <div class="cc-pros-cons-grid">
                         <?php if (!empty($pros)): ?>
                         <div class="cc-section cc-list">
-                            <h4 class="cc-section-title" style="color: var(--cc-green-500);"><?php echo get_cc_icon('check-circle', 'icon'); ?><span>Pros</span></h4>
-                            <ul><?php foreach ($pros as $pro) echo '<li><span class="icon pro">' . get_cc_icon('check-circle') . '</span><span>' . esc_html($pro) . '</span></li>'; ?></ul>
+                            <h4 class="cc-section-title" style="color: var(--cc-green-500);"><?php echo ccm_get_icon('check-circle', 'icon'); ?><span>Pros</span></h4>
+                            <ul><?php foreach ($pros as $pro) echo '<li><span class="icon pro">' . ccm_get_icon('check-circle') . '</span><span>' . esc_html($pro) . '</span></li>'; ?></ul>
                         </div>
                         <?php endif; ?>
                         <?php if (!empty($cons)): ?>
                         <div class="cc-section cc-list">
-                            <h4 class="cc-section-title" style="color: var(--cc-red-700);"><?php echo get_cc_icon('x-circle', 'icon'); ?><span>Cons</span></h4>
-                            <ul><?php foreach ($cons as $con) echo '<li><span class="icon con">' . get_cc_icon('x-circle') . '</span><span>' . esc_html($con) . '</span></li>'; ?></ul>
+                            <h4 class="cc-section-title" style="color: var(--cc-red-700);"><?php echo ccm_get_icon('x-circle', 'icon'); ?><span>Cons</span></h4>
+                            <ul><?php foreach ($cons as $con) echo '<li><span class="icon con">' . ccm_get_icon('x-circle') . '</span><span>' . esc_html($con) . '</span></li>'; ?></ul>
                         </div>
                         <?php endif; ?>
                     </div>
                      <?php if (!empty($best_for)): ?>
                     <div class="cc-section">
-                        <h3 class="cc-section-title" style="color: var(--cc-blue-700);"><?php echo get_cc_icon('target', 'icon'); ?><span>Best For</span></h3>
+                        <h3 class="cc-section-title" style="color: var(--cc-blue-700);"><?php echo ccm_get_icon('target', 'icon'); ?><span>Best For</span></h3>
                         <div class="cc-best-for-tags"><?php foreach ($best_for as $item) echo '<span>' . esc_html($item) . '</span>'; ?></div>
                     </div>
                     <?php endif; ?>
@@ -307,7 +286,7 @@ function get_cc_icon($name, $classes = '') {
                         <h3 class="cc-section-title">Key Features</h3>
                         <?php if (!empty($features)): foreach ($features as $feature): ?>
                         <div class="cc-feature-item">
-                            <?php echo get_cc_icon('gift', 'icon'); // Generic icon, can be dynamic ?>
+                            <?php echo ccm_get_icon('gift', 'icon'); // Generic icon, can be dynamic ?>
                             <div>
                                 <p class="title"><?php echo esc_html($feature['title']); ?></p>
                                 <p class="desc"><?php echo esc_html($feature['description']); ?></p>
@@ -337,8 +316,8 @@ function get_cc_icon($name, $classes = '') {
                 <div id="fees" class="cc-tab-content">
                      <div class="cc-section cc-data-table">
                         <h3 class="cc-section-title">Fees & Charges</h3>
-                        <div class="item"><span class="label">Joining Fee</span><span class="value negative"><?php echo esc_html($joining_fee); ?></span></div>
-                        <div class="item"><span class="label">Annual Fee</span><span class="value negative"><?php echo esc_html($annual_fee); ?></span></div>
+                        <div class="item"><span class="label">Joining Fee</span><span class="value negative"><?php echo esc_html(format_rupees($joining_fee)); ?></span></div>
+                        <div class="item"><span class="label">Annual Fee</span><span class="value negative"><?php echo esc_html(format_rupees($annual_fee)); ?></span></div>
                         <?php if (!empty($fees)): foreach ($fees as $fee): ?>
                         <div class="item">
                             <span class="label"><?php echo esc_html($fee['type']); ?></span>
@@ -361,8 +340,8 @@ function get_cc_icon($name, $classes = '') {
                     </div>
                     <?php if (!empty($documents)): ?>
                     <div class="cc-section cc-list">
-                        <h3 class="cc-section-title"><?php echo get_cc_icon('file-text', 'icon'); ?><span>Required Documents</span></h3>
-                        <ul><?php foreach ($documents as $doc) echo '<li><span class="icon">' . get_cc_icon('file-text') . '</span><span>' . esc_html($doc) . '</span></li>'; ?></ul>
+                        <h3 class="cc-section-title"><?php echo ccm_get_icon('file-text', 'icon'); ?><span>Required Documents</span></h3>
+                        <ul><?php foreach ($documents as $doc) echo '<li><span class="icon">' . ccm_get_icon('file-text') . '</span><span>' . esc_html($doc) . '</span></li>'; ?></ul>
                     </div>
                     <?php endif; ?>
                 </div>
@@ -372,10 +351,20 @@ function get_cc_icon($name, $classes = '') {
                     <h3>Ready to Apply?</h3>
                     <p>Join thousands of satisfied customers and start earning rewards today!</p>
                      <a href="<?php echo $apply_link; ?>" target="_blank" rel="noopener sponsored" class="cc-btn">
-                        <?php echo get_cc_icon('zap', 'icon'); ?>
+                        <?php echo ccm_get_icon('zap', 'icon'); ?>
                         <span>Apply Now</span>
-                        <?php echo get_cc_icon('arrow-right', 'icon'); ?>
+                        <?php echo ccm_get_icon('arrow-right', 'icon'); ?>
                     </a>
+                </div>
+                <div class="cc-section">
+                    <?php
+                    error_log('Comments open: ' . (comments_open() ? 'yes' : 'no'));
+                    error_log('Number of comments: ' . get_comments_number());
+                    // If comments are open or we have at least one comment, load up the comment template.
+                    if (comments_open() || get_comments_number()) :
+                        comments_template();
+                    endif;
+                    ?>
                 </div>
             </div>
         </article>

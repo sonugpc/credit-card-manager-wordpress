@@ -9,10 +9,16 @@
  * Text Domain: credit-card-manager
  */
 
-add_filter('template_include', 'load_credit_card_templates_from_plugin');
-
 function load_credit_card_templates_from_plugin($template) {
     $post_type = 'credit-card';
+
+    // Handle comparison page
+    if (get_query_var('credit_card_compare') || is_page('compare-cards') || (isset($_SERVER['REQUEST_URI']) && strpos($_SERVER['REQUEST_URI'], '/compare-cards') !== false)) {
+        $compare_template = plugin_dir_path(__FILE__) . "templates/page-compare-cards.php";
+        if (file_exists($compare_template)) {
+            return $compare_template;
+        }
+    }
 
     if (is_singular($post_type)) {
         $single_template = plugin_dir_path(__FILE__) . "templates/single-{$post_type}.php";
@@ -31,18 +37,44 @@ function load_credit_card_templates_from_plugin($template) {
     return $template;
 }
 
+// Add rewrite rules for comparison page
+function add_credit_card_rewrite_rules() {
+    add_rewrite_rule('^compare-cards/?$', 'index.php?credit_card_compare=1', 'top');
+    add_rewrite_rule('^compare-cards/([^/]+)/?$', 'index.php?credit_card_compare=1&cards=$matches[1]', 'top');
+}
+
+// Add query vars
+function add_credit_card_query_vars($vars) {
+    $vars[] = 'credit_card_compare';
+    $vars[] = 'cards';
+    return $vars;
+}
+
+// Register hooks after functions are defined
+add_filter('template_include', 'load_credit_card_templates_from_plugin');
+add_action('init', 'add_credit_card_rewrite_rules');
+add_filter('query_vars', 'add_credit_card_query_vars');
 
 // Prevent direct access
 if (!defined('ABSPATH')) {
     exit;
 }
 
+// Include Configuration
+require_once plugin_dir_path(__FILE__) . 'includes/config.php';
+
 // Include API functions
 require_once plugin_dir_path(__FILE__) . 'includes/api.php';
 
+// Include Shortcodes
+require_once plugin_dir_path(__FILE__) . 'includes/shortcodes.php';
+
+// Include Helper Functions
+require_once plugin_dir_path(__FILE__) . 'includes/helper-functions.php';
+
 class CreditCardManager {
     
-    private $version = '1.0.0';
+    private $version = CCM_VERSION;
     
     public function __construct() {
         add_action('init', array($this, 'init'));
@@ -120,7 +152,7 @@ class CreditCardManager {
             'hierarchical'       => false,
             'menu_position'      => 5,
             'menu_icon'          => 'dashicons-id-alt',
-            'supports'           => array('title', 'editor', 'thumbnail', 'excerpt', 'custom-fields'),
+            'supports'           => array('title', 'editor', 'thumbnail', 'excerpt', 'custom-fields', 'comments'),
             'taxonomies'         => array('store', 'category', 'network-type'),
         );
         
@@ -196,17 +228,17 @@ public function register_meta_fields() {
             'show_in_rest' => true,
         ),
         'annual_fee' => array(
-            'type' => 'string',
+            'type' => 'number',
             'description' => 'Annual fee amount',
             'single' => true,
-            'sanitize_callback' => 'sanitize_text_field',
+            'sanitize_callback' => 'absint',
             'show_in_rest' => true,
         ),
         'joining_fee' => array(
-            'type' => 'string',
+            'type' => 'number',
             'description' => 'Joining fee amount',
             'single' => true,
-            'sanitize_callback' => 'sanitize_text_field',
+            'sanitize_callback' => 'absint',
             'show_in_rest' => true,
         ),
         'welcome_bonus' => array(
@@ -618,12 +650,12 @@ public function register_meta_fields() {
                 
                 <div class="ccm-field">
                     <label for="annual_fee"><?php _e('Annual Fee', 'credit-card-manager'); ?></label>
-                    <input type="text" id="annual_fee" name="annual_fee" value="<?php echo esc_attr($annual_fee); ?>" placeholder="₹2,500" />
+                    <input type="number" id="annual_fee" name="annual_fee" value="<?php echo esc_attr($annual_fee); ?>" placeholder="2500" />
                 </div>
                 
                 <div class="ccm-field">
                     <label for="joining_fee"><?php _e('Joining Fee', 'credit-card-manager'); ?></label>
-                    <input type="text" id="joining_fee" name="joining_fee" value="<?php echo esc_attr($joining_fee); ?>" placeholder="₹2,500" />
+                    <input type="number" id="joining_fee" name="joining_fee" value="<?php echo esc_attr($joining_fee); ?>" placeholder="2500" />
                 </div>
                 
                 <div class="ccm-field">
@@ -821,7 +853,7 @@ public function register_meta_fields() {
        
        // Save simple fields
        $simple_fields = array(
-           'card_image_url', 'rating', 'review_count', 'annual_fee', 'joining_fee',
+           'card_image_url', 'rating', 'review_count',
            'welcome_bonus', 'welcome_bonus_points', 'welcome_bonus_type', 'cashback_rate',
            'credit_limit', 'interest_rate', 'processing_time', 'min_income',
            'min_age', 'max_age', 'apply_link', 'theme_color'
@@ -830,6 +862,14 @@ public function register_meta_fields() {
        foreach ($simple_fields as $field) {
            if (isset($_POST[$field])) {
                update_post_meta($post_id, $field, sanitize_text_field($_POST[$field]));
+           }
+       }
+
+       // Save numeric fields
+       $numeric_fields = array('annual_fee', 'joining_fee');
+       foreach ($numeric_fields as $field) {
+           if (isset($_POST[$field])) {
+               update_post_meta($post_id, $field, absint($_POST[$field]));
            }
        }
        
@@ -1520,26 +1560,65 @@ if (is_wp_error($categories)) $categories = array();
     * Frontend Scripts
     */
    public function frontend_scripts() {
-       if (is_singular('credit-card') || is_post_type_archive('credit-card')) {
+       $is_archive = is_post_type_archive('credit-card');
+       $is_single = is_singular('credit-card');
+       $is_compare = is_page('compare-cards') || get_query_var('credit_card_compare');
+       
+       // Load styles and scripts only where needed
+       if ($is_archive || $is_single || $is_compare) {
+           // Core frontend styles (loaded on all credit card pages)
+           wp_enqueue_style(
+               'ccm-frontend',
+               ccm_asset_url('frontend.css'),
+               array(),
+               $this->version
+           );
+           
+           // CSS variable fix (ensures compatibility)
+           wp_enqueue_style(
+               'ccm-css-fix',
+               ccm_asset_url('css-fix.css'),
+               array('ccm-frontend'),
+               $this->version
+           );
+           
+           // Archive-specific styles
+           if ($is_archive) {
+               wp_enqueue_style(
+                   'ccm-archive-cards',
+                   ccm_asset_url('archive-cards.css'),
+                   array('ccm-css-fix'),
+                   $this->version
+               );
+           }
+           
+           // Comparison page styles
+           if ($is_compare) {
+               wp_enqueue_style(
+                   'ccm-compare',
+                   ccm_asset_url('compare.css'),
+                   array('ccm-css-fix'),
+                   $this->version
+               );
+           }
+
+           // Core frontend JavaScript
            wp_enqueue_script(
-               'credit-card-frontend',
-               plugin_dir_url(__FILE__) . 'assets/frontend.js',
+               'ccm-frontend',
+               ccm_asset_url('frontend.js'),
                array('jquery'),
                $this->version,
                true
            );
            
-           wp_enqueue_style(
-               'credit-card-frontend',
-               plugin_dir_url(__FILE__) . 'assets/frontend.css',
-               array(),
-               $this->version
-           );
-           
-           wp_localize_script('credit-card-frontend', 'ccm_frontend', array(
+           // Localize script for AJAX and API calls
+           wp_localize_script('ccm-frontend', 'ccm_frontend', array(
                'ajax_url' => admin_url('admin-ajax.php'),
                'api_url' => rest_url('ccm/v1/'),
                'nonce' => wp_create_nonce('wp_rest'),
+               'is_archive' => $is_archive,
+               'is_single' => $is_single,
+               'is_compare' => $is_compare,
            ));
        }
    }

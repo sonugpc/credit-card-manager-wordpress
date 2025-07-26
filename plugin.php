@@ -72,6 +72,9 @@ require_once plugin_dir_path(__FILE__) . 'includes/shortcodes.php';
 // Include Helper Functions
 require_once plugin_dir_path(__FILE__) . 'includes/helper-functions.php';
 
+// Include SEO Functions
+require_once plugin_dir_path(__FILE__) . 'includes/seo-functions.php';
+
 class CreditCardManager {
     
     private $version = CCM_VERSION;

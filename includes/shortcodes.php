@@ -142,7 +142,7 @@ function ccm_register_credit_card_shortcode($atts) {
     if ($atts['mode'] === 'mini') {
         // Mini mode using existing CSS classes
         ?>
-        <div class="cc-card cc-card-shortcode-mini" data-card-id="<?php echo esc_attr($card_data['id']); ?>">
+        <div class="cc-card cc-card-shortcode-mini" data-id="<?php echo esc_attr($card_data['id']); ?>">
             <!-- Full width header -->
             <div class="cc-card-header" style="background: var(--cc-gray-50); border-bottom: 1px solid var(--cc-gray-200); padding: 1.25rem;">
                 <h3 class="cc-card-title" style="margin: 0 0 0.5rem 0; font-size: 1.25rem;"><?php echo esc_html($card_data['title']); ?></h3>
@@ -208,8 +208,15 @@ function ccm_register_credit_card_shortcode($atts) {
                     </div>
                 </div>
 
-                <?php if ($card_data['apply_link']): ?>
-                <div style="position: absolute; top: 0; right: 0;">
+                <div style="position: absolute; top: 0; right: 0; display: flex; gap: 0.5rem; align-items: center;">
+                    <label class="cc-btn-compare" 
+                           data-id="<?php echo esc_attr($card_data['id']); ?>"
+                           data-title="<?php echo esc_attr($card_data['title']); ?>"
+                           style="display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.5rem; background: var(--cc-white); color: var(--cc-gray-700); border: 1px solid var(--cc-gray-300); border-radius: var(--cc-radius-sm); cursor: pointer; font-size: 0.75rem;">
+                        <input type="checkbox" style="margin: 0; width: 14px; height: 14px;">
+                        <span>Compare</span>
+                    </label>
+                    <?php if ($card_data['apply_link']): ?>
                     <a href="<?php echo esc_url($card_data['apply_link']); ?>" 
                        class="cc-btn cc-btn-apply" 
                        target="_blank" 
@@ -217,15 +224,15 @@ function ccm_register_credit_card_shortcode($atts) {
                        style="display: inline-flex; align-items: center; gap: 0.5rem;">
                         Apply Now <span style="font-size: 0.8em;">✈</span>
                     </a>
+                    <?php endif; ?>
                 </div>
-                <?php endif; ?>
             </div>
         </div>
         <?php
     } else {
         // Full mode using existing CSS classes with collapsible sections
         ?>
-        <div class="cc-card cc-card-shortcode-full" data-card-id="<?php echo esc_attr($card_data['id']); ?>">
+        <div class="cc-card cc-card-shortcode-full" data-id="<?php echo esc_attr($card_data['id']); ?>">
             <!-- Full width header -->
             <div class="cc-card-header" style="background: var(--cc-gray-50); border-bottom: 1px solid var(--cc-gray-200); padding: 1.25rem;">
                 <h3 class="cc-card-title" style="margin: 0 0 0.5rem 0; font-size: 1.5rem;"><?php echo esc_html($card_data['title']); ?></h3>
@@ -289,8 +296,15 @@ function ccm_register_credit_card_shortcode($atts) {
                     <?php endif; ?>
                 </div>
 
-                <?php if ($card_data['apply_link']): ?>
-                <div>
+                <div style="display: flex; gap: 0.75rem; align-items: center;">
+                    <label class="cc-btn-compare" 
+                           data-id="<?php echo esc_attr($card_data['id']); ?>"
+                           data-title="<?php echo esc_attr($card_data['title']); ?>"
+                           style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.5rem 0.75rem; background: var(--cc-white); color: var(--cc-gray-700); border: 1px solid var(--cc-gray-300); border-radius: var(--cc-radius); cursor: pointer; font-size: 0.875rem;">
+                        <input type="checkbox" style="margin: 0; width: 16px; height: 16px;">
+                        <span>Compare</span>
+                    </label>
+                    <?php if ($card_data['apply_link']): ?>
                     <a href="<?php echo esc_url($card_data['apply_link']); ?>" 
                        class="cc-btn cc-btn-apply" 
                        target="_blank" 
@@ -298,8 +312,8 @@ function ccm_register_credit_card_shortcode($atts) {
                        style="display: inline-flex; align-items: center; gap: 0.5rem;">
                         Apply Now <span style="font-size: 0.8em;">✈</span>
                     </a>
+                    <?php endif; ?>
                 </div>
-                <?php endif; ?>
             </div>
 
             <!-- Collapsible Sections -->
@@ -433,6 +447,29 @@ function ccm_register_credit_card_shortcode($atts) {
         <?php
     }
 
+    // Add comparison bar if it doesn't exist
+    if (!wp_script_is('comparison-bar-added')) {
+        echo '<div class="cc-comparison-bar" id="comparison-bar" style="position: fixed; bottom: 0; left: 0; right: 0; background-color: var(--cc-gray-800); color: var(--cc-white); padding: 1rem; z-index: 100; box-shadow: var(--cc-shadow-lg); transform: translateY(100%); transition: transform 0.3s ease;">
+            <div class="cc-comparison-content" style="max-width: 1200px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between;">
+                <div class="cc-comparison-info" style="display: flex; align-items: center; gap: 1rem;">
+                    <span style="font-size: 1.2em;">⚖️</span>
+                    <div>
+                        <span id="selected-count">0</span> cards selected for comparison
+                    </div>
+                </div>
+                <div class="cc-comparison-actions" style="display: flex; gap: 0.75rem;">
+                    <button type="button" class="cc-btn cc-btn-secondary" id="clear-comparison" style="padding: 0.5rem 1rem; background: transparent; color: var(--cc-white); border: 1px solid var(--cc-gray-300);" onclick="ccClearComparison()">
+                        Clear All
+                    </button>
+                    <button type="button" class="cc-btn cc-btn-primary" id="compare-now" disabled style="padding: 0.5rem 1rem; background: var(--cc-blue-600); color: var(--cc-white); border: none;" onclick="ccHandleCompareNow()">
+                        Compare Now
+                    </button>
+                </div>
+            </div>
+        </div>';
+        wp_add_inline_script('credit-card-frontend', 'window.comparisonBarAdded = true;', 'before');
+    }
+
     // Add simple CSS for mobile responsiveness
     ?>
     <style>
@@ -449,10 +486,24 @@ function ccm_register_credit_card_shortcode($atts) {
         .cc-card-shortcode-mini .cc-card-content > div:last-child {
             position: static !important;
             margin-top: 1rem;
+            justify-content: center;
+        }
+        .cc-card-shortcode-mini .cc-card-content > div:last-child > button,
+        .cc-card-shortcode-mini .cc-card-content > div:last-child > a {
+            padding: 0.5rem 1rem;
+            font-size: 0.85rem;
         }
         .cc-card-shortcode-full .cc-card-content {
             grid-template-columns: 1fr !important;
             text-align: center;
+        }
+        .cc-card-shortcode-full .cc-card-content > div:last-child {
+            justify-content: center;
+        }
+        .cc-card-shortcode-full .cc-card-content > div:last-child > button,
+        .cc-card-shortcode-full .cc-card-content > div:last-child > a {
+            padding: 0.5rem 1rem;
+            font-size: 0.85rem;
         }
     }
     </style>
@@ -470,6 +521,142 @@ function ccm_register_credit_card_shortcode($atts) {
             content.style.display = 'block';
             icon.style.transform = 'rotate(180deg)';
             header.style.background = 'var(--cc-gray-100)';
+        }
+    }
+
+    // Initialize comparison for shortcode buttons
+    document.addEventListener('DOMContentLoaded', function() {
+        // Handle shortcode compare buttons with checkboxes
+        const shortcodeCompareButtons = document.querySelectorAll('.cc-card-shortcode-mini .cc-btn-compare, .cc-card-shortcode-full .cc-btn-compare');
+        
+        shortcodeCompareButtons.forEach(function(label) {
+            const checkbox = label.querySelector('input[type="checkbox"]');
+            const cardId = label.getAttribute('data-id');
+            
+            if (checkbox && cardId) {
+                // Check if card is already selected
+                const savedCards = localStorage.getItem('cc_compare_cards');
+                if (savedCards) {
+                    try {
+                        const selectedCards = JSON.parse(savedCards);
+                        if (selectedCards.includes(cardId)) {
+                            checkbox.checked = true;
+                        }
+                    } catch (e) {
+                        console.error('Error loading saved comparison data', e);
+                    }
+                }
+                
+                // Add click handler to label
+                label.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    
+                    // Toggle checkbox
+                    checkbox.checked = !checkbox.checked;
+                    
+                    // Trigger comparison update
+                    const event = new CustomEvent('ccCompareToggle', {
+                        detail: { cardId: cardId, selected: checkbox.checked }
+                    });
+                    document.dispatchEvent(event);
+                });
+            }
+        });
+        
+        // Update comparison bar when shortcode buttons are toggled
+        document.addEventListener('ccCompareToggle', function(e) {
+            const { cardId, selected } = e.detail;
+            let selectedCards = [];
+            
+            // Load existing selections
+            const saved = localStorage.getItem('cc_compare_cards');
+            if (saved) {
+                try {
+                    selectedCards = JSON.parse(saved);
+                } catch (err) {
+                    selectedCards = [];
+                }
+            }
+            
+            if (selected && !selectedCards.includes(cardId)) {
+                if (selectedCards.length < 3) {
+                    selectedCards.push(cardId);
+                } else {
+                    alert('You can only compare up to 3 cards at once.');
+                    // Uncheck the checkbox
+                    const label = document.querySelector(`.cc-btn-compare[data-id="${cardId}"]`);
+                    if (label) {
+                        const checkbox = label.querySelector('input[type="checkbox"]');
+                        if (checkbox) checkbox.checked = false;
+                    }
+                    return;
+                }
+            } else if (!selected && selectedCards.includes(cardId)) {
+                selectedCards = selectedCards.filter(id => id !== cardId);
+            }
+            
+            // Save updated selections
+            localStorage.setItem('cc_compare_cards', JSON.stringify(selectedCards));
+            
+            // Update comparison bar
+            const comparisonBar = document.getElementById('comparison-bar');
+            const selectedCountEl = document.getElementById('selected-count');
+            const compareNowBtn = document.getElementById('compare-now');
+            
+            if (comparisonBar && selectedCountEl) {
+                if (selectedCards.length > 0) {
+                    comparisonBar.style.transform = 'translateY(0)';
+                    selectedCountEl.textContent = selectedCards.length;
+                    if (compareNowBtn) {
+                        compareNowBtn.disabled = selectedCards.length < 2;
+                    }
+                } else {
+                    comparisonBar.style.transform = 'translateY(100%)';
+                }
+            }
+        });
+    });
+
+    // Handle clear comparison
+    function ccClearComparison() {
+        localStorage.removeItem('cc_compare_cards');
+        
+        // Uncheck all checkboxes
+        const checkboxes = document.querySelectorAll('.cc-btn-compare input[type="checkbox"]');
+        checkboxes.forEach(checkbox => checkbox.checked = false);
+        
+        // Hide comparison bar
+        const comparisonBar = document.getElementById('comparison-bar');
+        if (comparisonBar) {
+            comparisonBar.style.transform = 'translateY(100%)';
+        }
+    }
+
+    // Handle compare now
+    function ccHandleCompareNow() {
+        const savedCards = localStorage.getItem('cc_compare_cards');
+        if (savedCards) {
+            try {
+                const selectedCards = JSON.parse(savedCards);
+                if (selectedCards.length >= 2) {
+                    // Try to get the current page URL or archive URL
+                    let baseUrl = window.location.origin + window.location.pathname;
+                    
+                    // If we're on a post with shortcode, try to find the credit card archive URL
+                    const archiveContainer = document.querySelector('.cc-archive-container');
+                    if (archiveContainer && archiveContainer.getAttribute('data-archive-url')) {
+                        baseUrl = archiveContainer.getAttribute('data-archive-url');
+                    } else {
+                        // Use WordPress site URL with credit card post type archive
+                        baseUrl = window.location.origin + '/credit-card/';
+                    }
+                    
+                    const compareUrl = baseUrl + '?compare=' + selectedCards.join(',');
+                    window.location.href = compareUrl;
+                }
+            } catch (e) {
+                console.error('Error loading comparison data', e);
+            }
         }
     }
     </script>

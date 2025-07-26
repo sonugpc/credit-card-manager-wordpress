@@ -38,42 +38,68 @@ if (!empty($card_ids)) {
 
 // SEO and Dynamic Content
 $card_titles = wp_list_pluck($compare_cards, 'title');
-$page_title = 'Credit Card Comparison';
+$page_title = 'Credit Card Comparison Tool - Compare Best Cards';
 if (count($card_titles) > 1) {
-    $page_title = implode(' vs ', $card_titles);
+    $page_title = implode(' vs ', $card_titles) . ' - Credit Card Comparison';
 }
 
-$meta_description = 'Compare ' . $page_title . ' on key features like annual fees, rewards, interest rates, and more. Make an informed decision with our detailed side-by-side comparison.';
+$meta_description = 'Compare credit cards side-by-side with our detailed comparison tool. Analyze fees, rewards, benefits, and interest rates to find the perfect card for your needs.';
+if (count($card_titles) > 1) {
+    $meta_description = 'Compare ' . implode(' vs ', $card_titles) . ' credit cards. Detailed side-by-side comparison of fees, rewards, benefits, and features to help you choose the best card.';
+}
+
 $canonical_url = get_permalink();
+if (!empty($card_ids)) {
+    $canonical_url = add_query_arg('cards', implode(',', $card_ids), get_permalink());
+}
 
 $dynamic_description = 'Choosing the right credit card can be overwhelming. Our comparison tool helps you analyze the key benefits and features of the most popular credit cards, so you can find the one that best fits your spending habits and financial goals. Compare rewards, fees, and interest rates to make a confident decision.';
 if (count($card_titles) > 1) {
-    $dynamic_description = 'Comparing ' . $page_title . '? This page provides a detailed side-by-side analysis of their features, benefits, and fees. Discover which card offers the best rewards, lowest fees, and most valuable perks to help you make an informed financial decision.';
+    $dynamic_description = 'Comparing ' . implode(' vs ', $card_titles) . '? This page provides a detailed side-by-side analysis of their features, benefits, and fees. Discover which card offers the best rewards, lowest fees, and most valuable perks to help you make an informed financial decision.';
+}
+
+// Additional SEO data
+$keywords = 'credit card comparison, compare credit cards, ' . implode(', ', $card_titles) . ', best credit cards, fees comparison, rewards comparison';
+$breadcrumbs = [
+    ['name' => 'Home', 'url' => home_url()],
+    ['name' => 'Credit Cards', 'url' => get_post_type_archive_link('credit-card')],
+    ['name' => 'Compare Cards', 'url' => $canonical_url]
+];
+?>
+
+<?php
+// Only output meta tags if no SEO plugin is detected
+if (!function_exists('ccm_has_seo_plugin') || !ccm_has_seo_plugin()) {
+    // Output meta tags only if no SEO plugin
+    ccm_add_meta_tags($page_title, $meta_description, $canonical_url, $keywords);
+} else {
+    echo '<!-- Meta tags handled by ' . (class_exists('RankMath') ? 'RankMath' : 'SEO Plugin') . ' -->' . "\n";
 }
 ?>
 
-<!-- SEO Meta Tags -->
-<title><?php echo esc_html($page_title); ?></title>
-<meta name="description" content="<?php echo esc_attr($meta_description); ?>">
-<link rel="canonical" href="<?php echo esc_url($canonical_url); ?>">
+<!-- Breadcrumb Navigation -->
+<nav style="background: white; padding: 1rem 1.5rem; border-bottom: 1px solid #e5e7eb;">
+    <ol style="display: flex; align-items: center; gap: 0.5rem; margin: 0; padding: 0; list-style: none; font-size: 0.875rem; color: #6b7280;">
+        <?php foreach ($breadcrumbs as $index => $breadcrumb): ?>
+            <li style="display: flex; align-items: center; gap: 0.5rem;">
+                <?php if ($index > 0): ?>
+                    <span style="color: #9ca3af;">›</span>
+                <?php endif; ?>
+                <?php if ($index < count($breadcrumbs) - 1): ?>
+                    <a href="<?php echo esc_url($breadcrumb['url']); ?>" style="color: #2563eb; text-decoration: none;">
+                        <?php echo esc_html($breadcrumb['name']); ?>
+                    </a>
+                <?php else: ?>
+                    <span style="color: #1f2937; font-weight: 500;">
+                        <?php echo esc_html($breadcrumb['name']); ?>
+                    </span>
+                <?php endif; ?>
+            </li>
+        <?php endforeach; ?>
+    </ol>
+</nav>
 
-<!-- Open Graph / Facebook -->
-<meta property="og:type" content="website">
-<meta property="og:url" content="<?php echo esc_url($canonical_url); ?>">
-<meta property="og:title" content="<?php echo esc_attr($page_title); ?>">
-<meta property="og:description" content="<?php echo esc_attr($meta_description); ?>">
-<?php if (!empty($compare_cards) && has_post_thumbnail($compare_cards[0]['id'])): ?>
-    <meta property="og:image" content="<?php echo esc_url(get_the_post_thumbnail_url($compare_cards[0]['id'], 'large')); ?>">
-<?php endif; ?>
-
-<!-- Twitter -->
-<meta property="twitter:card" content="summary_large_image">
-<meta property="twitter:url" content="<?php echo esc_url($canonical_url); ?>">
-<meta property="twitter:title" content="<?php echo esc_attr($page_title); ?>">
-<meta property="twitter:description" content="<?php echo esc_attr($meta_description); ?>">
-<?php if (!empty($compare_cards) && has_post_thumbnail($compare_cards[0]['id'])): ?>
-    <meta property="twitter:image" content="<?php echo esc_url(get_the_post_thumbnail_url($compare_cards[0]['id'], 'large')); ?>">
-<?php endif; ?>
+<!-- Social media tags handled by SEO plugin or output conditionally -->
 
 <div class="compare-container">
     <!-- Header Section -->
@@ -222,29 +248,112 @@ document.addEventListener('DOMContentLoaded', function() {
 <script type="application/ld+json">
 {
     "@context": "https://schema.org",
-    "@type": "ComparisonPage",
+    "@type": "WebPage",
     "name": "<?php echo esc_attr($page_title); ?>",
     "description": "<?php echo esc_attr($meta_description); ?>",
+    "url": "<?php echo esc_url($canonical_url); ?>",
+    "breadcrumb": {
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+            <?php foreach ($breadcrumbs as $index => $breadcrumb): ?>
+            {
+                "@type": "ListItem",
+                "position": <?php echo $index + 1; ?>,
+                "name": "<?php echo esc_attr($breadcrumb['name']); ?>",
+                "item": "<?php echo esc_url($breadcrumb['url']); ?>"
+            }<?php echo ($index < count($breadcrumbs) - 1) ? ',' : ''; ?>
+            <?php endforeach; ?>
+        ]
+    },
+    "mainEntity": {
+        "@type": "ItemList",
+        "name": "Credit Card Comparison",
+        "description": "Compare multiple credit cards side by side",
+        "numberOfItems": "<?php echo count($compare_cards); ?>",
+        "itemListElement": [
+            <?php foreach ($compare_cards as $index => $card): ?>
+            {
+                "@type": "ListItem",
+                "position": <?php echo $index + 1; ?>,
+                "item": {
+                    "@type": "FinancialProduct",
+                    "name": "<?php echo esc_attr($card['title']); ?>",
+                    "url": "<?php echo esc_url(get_permalink($card['id'])); ?>",
+                    "image": "<?php echo esc_url(get_the_post_thumbnail_url($card['id'], 'large')); ?>",
+                    "description": "<?php echo esc_attr(wp_strip_all_tags(get_the_excerpt($card['id']))); ?>",
+                    "category": "Credit Card",
+                    "brand": {
+                        "@type": "Brand",
+                        "name": "<?php 
+                        $bank_terms = get_the_terms($card['id'], 'store');
+                        echo esc_attr((!is_wp_error($bank_terms) && !empty($bank_terms)) ? $bank_terms[0]->name : '');
+                        ?>"
+                    },
+                    "aggregateRating": {
+                        "@type": "AggregateRating",
+                        "ratingValue": "<?php echo esc_attr(ccm_get_meta($card['id'], 'rating', '0', true)); ?>",
+                        "reviewCount": "<?php echo esc_attr(ccm_get_meta($card['id'], 'review_count', '0', true)); ?>",
+                        "bestRating": "5",
+                        "worstRating": "1"
+                    },
+                    "offers": {
+                        "@type": "Offer",
+                        "url": "<?php echo esc_url(ccm_get_meta($card['id'], 'apply_link', '#')); ?>",
+                        "priceCurrency": "INR",
+                        "price": "<?php echo esc_attr(preg_replace('/[^0-9.]/', '', ccm_get_meta($card['id'], 'annual_fee', '0'))); ?>",
+                        "priceValidUntil": "<?php echo date('Y-12-31'); ?>",
+                        "availability": "https://schema.org/InStock"
+                    },
+                    "additionalProperty": [
+                        {
+                            "@type": "PropertyValue",
+                            "name": "Annual Fee",
+                            "value": "₹<?php echo esc_attr(number_format(ccm_get_meta($card['id'], 'annual_fee', 0, true))); ?>"
+                        },
+                        {
+                            "@type": "PropertyValue",
+                            "name": "Welcome Bonus",
+                            "value": "<?php echo esc_attr(ccm_get_meta($card['id'], 'welcome_bonus', 'N/A')); ?>"
+                        }
+                    ]
+                }
+            }<?php echo ($index < count($compare_cards) - 1) ? ',' : ''; ?>
+            <?php endforeach; ?>
+        ]
+    }
+}
+</script>
+
+<!-- FAQ Schema for comparison questions -->
+<script type="application/ld+json">
+{
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
     "mainEntity": [
-        <?php foreach ($compare_cards as $index => $card): ?>
         {
-            "@type": "Product",
-            "name": "<?php echo esc_attr($card['title']); ?>",
-            "image": "<?php echo esc_url(get_the_post_thumbnail_url($card['id'], 'large')); ?>",
-            "description": "<?php echo esc_attr(get_the_excerpt($card['id'])); ?>",
-            "aggregateRating": {
-                "@type": "AggregateRating",
-                "ratingValue": "<?php echo esc_attr(ccm_get_meta($card['id'], 'rating', '0', true)); ?>",
-                "reviewCount": "<?php echo esc_attr(ccm_get_meta($card['id'], 'review_count', '0', true)); ?>"
-            },
-            "offers": {
-                "@type": "Offer",
-                "url": "<?php echo esc_url(ccm_get_meta($card['id'], 'apply_link', '#')); ?>",
-                "priceCurrency": "INR",
-                "price": "<?php echo esc_attr(preg_replace('/[^0-9.]/', '', ccm_get_meta($card['id'], 'annual_fee', '0'))); ?>"
+            "@type": "Question",
+            "name": "How do I compare credit cards effectively?",
+            "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "To compare credit cards effectively, focus on key factors like annual fees, interest rates, reward programs, welcome bonuses, and additional benefits. Consider your spending patterns and financial goals to choose the card that offers the most value for your lifestyle."
             }
-        }<?php echo ($index < count($compare_cards) - 1) ? ',' : ''; ?>
-        <?php endforeach; ?>
+        },
+        {
+            "@type": "Question",
+            "name": "What should I look for when comparing credit card fees?",
+            "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "When comparing credit card fees, examine the annual fee, joining fee, late payment charges, over-limit fees, and foreign transaction fees. Some cards waive annual fees for the first year or permanently if you meet certain spending criteria."
+            }
+        },
+        {
+            "@type": "Question",
+            "name": "Which credit card rewards program is best?",
+            "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "The best credit card rewards program depends on your spending habits. Cashback cards offer simplicity, points-based cards provide flexibility, and travel cards are ideal for frequent travelers. Compare earning rates, redemption options, and expiration policies."
+            }
+        }
     ]
 }
 </script>

@@ -136,7 +136,120 @@ if (isset($args['tax_query']) && count($args['tax_query']) > 1) {
 
 // Run the query
 $credit_cards = new WP_Query($args);
+
+// SEO Meta Data for Archive
+$archive_title = 'Best Credit Cards in India  - Compare & Apply Online On Bigtricks';
+$archive_description = 'Compare the best credit cards in India. Find cashback, rewards, and travel credit cards from top banks. Expert reviews, detailed comparisons, and instant online applications.';
+$archive_canonical = get_post_type_archive_link('credit-card');
+
+// Add filter-based title and description
+if ($current_bank) {
+    $bank_term = get_term_by('slug', $current_bank, 'store');
+    $bank_display_name = $bank_term ? $bank_term->name : $current_bank;
+    $archive_title = $bank_display_name . ' Credit Cards - Compare & Apply Online';
+    $archive_description = "Compare the best " . $bank_display_name . " credit cards in India. Find cashback, rewards, and travel cards with detailed reviews and instant applications.";
+}
+
+if ($current_category) {
+    $category_term = get_term_by('slug', $current_category, 'category');
+    $category_display_name = $category_term ? $category_term->name : $current_category;
+    $archive_title = 'Best ' . $category_display_name . ' Credit Cards in India - Compare & Apply';
+    $archive_description = "Find the best " . $category_display_name . " credit cards in India. Compare features, benefits, fees and apply online for instant approval.";
+}
+
+// Pagination for SEO
+$current_page = max(1, get_query_var('paged'));
+if ($current_page > 1) {
+    $archive_title .= ' - Page ' . $current_page;
+}
 ?>
+
+<?php
+// Only output meta tags if no SEO plugin is detected
+if (!function_exists('ccm_has_seo_plugin') || !ccm_has_seo_plugin()) {
+    // Output meta tags only if no SEO plugin
+    ccm_add_meta_tags(
+        $archive_title, 
+        $archive_description, 
+        $archive_canonical, 
+        'credit cards India, compare credit cards, best credit cards, cashback cards, rewards cards, travel cards, apply online'
+    );
+    
+    // Output social media tags only if no SEO plugin
+    ccm_add_og_tags($archive_title, $archive_description, $archive_canonical, '', 'website');
+    ccm_add_twitter_tags($archive_title, $archive_description, $archive_canonical);
+} else {
+    echo '<!-- Meta tags handled by ' . (class_exists('RankMath') ? 'RankMath' : 'SEO Plugin') . ' -->' . "\n";
+}
+?>
+
+<!-- JSON-LD Structured Data for Archive -->
+<script type="application/ld+json">
+{
+    "@context": "https://schema.org",
+    "@type": "CollectionPage",
+    "name": "<?php echo esc_attr($archive_title); ?>",
+    "description": "<?php echo esc_attr($archive_description); ?>",
+    "url": "<?php echo esc_url($archive_canonical); ?>",
+    "mainEntity": {
+        "@type": "ItemList",
+        "numberOfItems": "<?php echo $credit_cards->found_posts; ?>",
+        "itemListElement": [
+            <?php 
+            $card_items = [];
+            if ($credit_cards->have_posts()) {
+                $position = 1;
+                while ($credit_cards->have_posts()) {
+                    $credit_cards->the_post();
+                    $card_items[] = sprintf(
+                        '{
+                            "@type": "ListItem",
+                            "position": %d,
+                            "item": {
+                                "@type": "Product",
+                                "name": "%s",
+                                "url": "%s",
+                                "image": "%s",
+                                "aggregateRating": {
+                                    "@type": "AggregateRating",
+                                    "ratingValue": "%s",
+                                    "reviewCount": "%s"
+                                }
+                            }
+                        }',
+                        $position,
+                        esc_attr(get_the_title()),
+                        esc_url(get_permalink()),
+                        esc_url(has_post_thumbnail() ? get_the_post_thumbnail_url(get_the_ID(), 'medium') : ''),
+                        esc_attr(ccm_get_meta(get_the_ID(), 'rating', '0')),
+                        esc_attr(ccm_get_meta(get_the_ID(), 'review_count', '0'))
+                    );
+                    $position++;
+                    if ($position > 10) break; // Limit to first 10 for performance
+                }
+                wp_reset_postdata();
+            }
+            echo implode(',', $card_items);
+            ?>
+        ]
+    }
+}
+</script>
+
+<!-- WebSite Schema with SearchAction -->
+<script type="application/ld+json">
+{
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "name": "<?php bloginfo('name'); ?>",
+    "url": "<?php echo home_url(); ?>",
+    "potentialAction": {
+        "@type": "SearchAction",
+        "target": "<?php echo esc_url($archive_canonical); ?>?s={search_term_string}",
+        "query-input": "required name=search_term_string"
+    }
+}
+</script>
 
 <div class="ccv2-container">
     <!-- Hero Section -->

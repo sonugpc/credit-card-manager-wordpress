@@ -1,9 +1,9 @@
 <?php
 /**
  * The template for displaying a single "Credit Card" post type.
- * Inspired by a React component design for a feature-rich layout.
+ * SEO-optimized with rich snippets and meta tags
  *
- * @package YourThemeName
+ * @package Credit Card Manager
  */
 
 get_header();
@@ -63,7 +63,147 @@ if (!is_wp_error($network_terms) && !empty($network_terms)) {
     $network_type = 'N/A';
 }
 
+// Get Bank/Store taxonomy
+$bank_terms = get_the_terms($post_id, 'store');
+$bank_name = (!is_wp_error($bank_terms) && !empty($bank_terms)) ? $bank_terms[0]->name : '';
+
+// SEO Meta Data
+$page_title = get_the_title() . ' Credit Card Review & Apply Online';
+$meta_description = sprintf(
+    'Complete review of %s credit card with %s rating. Compare fees (₹%s annual), rewards, benefits and apply online. Get expert insights and user reviews.',
+    get_the_title(),
+    $rating,
+    number_format($annual_fee)
+);
+$canonical_url = get_permalink($post_id);
+$featured_image = has_post_thumbnail() ? get_the_post_thumbnail_url($post_id, 'large') : '';
+
+// Breadcrumb structured data
+$breadcrumbs = [
+    ['name' => 'Home', 'url' => home_url()],
+    ['name' => 'Credit Cards', 'url' => get_post_type_archive_link('credit-card')],
+    ['name' => get_the_title(), 'url' => $canonical_url]
+];
+
 ?>
+
+<?php
+// Only output meta tags if no SEO plugin is detected
+if (!function_exists('ccm_has_seo_plugin') || !ccm_has_seo_plugin()) {
+    // Output basic meta tags only if no SEO plugin
+    ccm_add_meta_tags(
+        $page_title, 
+        $meta_description, 
+        $canonical_url, 
+        get_the_title() . ', credit card, ' . $bank_name . ', ' . $network_type . ', rewards, cashback, apply online'
+    );
+    
+    // Output social media tags only if no SEO plugin
+    ccm_add_og_tags($page_title, $meta_description, $canonical_url, $featured_image, 'article');
+    ccm_add_twitter_tags($page_title, $meta_description, $canonical_url, $featured_image);
+    
+    // Article specific meta (only if no SEO plugin)
+    echo '<meta property="article:published_time" content="' . get_the_date('c') . '">' . "\n";
+    echo '<meta property="article:modified_time" content="' . get_the_modified_date('c') . '">' . "\n";
+    echo '<meta property="article:section" content="Credit Cards">' . "\n";
+    echo '<meta property="article:tag" content="' . esc_attr(get_the_title() . ', ' . $bank_name . ', Credit Card') . '">' . "\n";
+} else {
+    echo '<!-- Meta tags handled by ' . (class_exists('RankMath') ? 'RankMath' : 'SEO Plugin') . ' -->' . "\n";
+}
+?>
+
+<!-- JSON-LD Structured Data -->
+<script type="application/ld+json">
+{
+    "@context": "https://schema.org",
+    "@type": "Product",
+    "name": "<?php echo esc_attr(get_the_title()); ?>",
+    "description": "<?php echo esc_attr(wp_strip_all_tags(get_the_excerpt())); ?>",
+    "brand": {
+        "@type": "Brand",
+        "name": "<?php echo esc_attr($bank_name); ?>"
+    },
+    <?php if ($featured_image): ?>
+    "image": "<?php echo esc_url($featured_image); ?>",
+    <?php endif; ?>
+    "category": "Credit Card",
+    "aggregateRating": {
+        "@type": "AggregateRating",
+        "ratingValue": "<?php echo esc_attr($rating); ?>",
+        "reviewCount": "<?php echo esc_attr($review_count); ?>",
+        "bestRating": "5",
+        "worstRating": "1"
+    },
+    "offers": {
+        "@type": "Offer",
+        "url": "<?php echo esc_url($apply_link); ?>",
+        "priceCurrency": "INR",
+        "price": "<?php echo esc_attr($annual_fee); ?>",
+        "priceValidUntil": "<?php echo date('Y-12-31'); ?>",
+        "availability": "https://schema.org/InStock",
+        "seller": {
+            "@type": "Organization",
+            "name": "<?php echo esc_attr($bank_name); ?>"
+        }
+    },
+    "additionalProperty": [
+        {
+            "@type": "PropertyValue",
+            "name": "Annual Fee",
+            "value": "₹<?php echo esc_attr(number_format($annual_fee)); ?>"
+        },
+        {
+            "@type": "PropertyValue",
+            "name": "Network Type",
+            "value": "<?php echo esc_attr($network_type); ?>"
+        },
+        {
+            "@type": "PropertyValue",
+            "name": "Welcome Bonus",
+            "value": "<?php echo esc_attr($welcome_bonus); ?>"
+        }
+    ]
+}
+</script>
+
+<!-- BreadcrumbList Schema -->
+<script type="application/ld+json">
+{
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+        <?php foreach ($breadcrumbs as $index => $breadcrumb): ?>
+        {
+            "@type": "ListItem",
+            "position": <?php echo $index + 1; ?>,
+            "name": "<?php echo esc_attr($breadcrumb['name']); ?>",
+            "item": "<?php echo esc_url($breadcrumb['url']); ?>"
+        }<?php echo ($index < count($breadcrumbs) - 1) ? ',' : ''; ?>
+        <?php endforeach; ?>
+    ]
+}
+</script>
+
+<!-- FinancialProduct Schema -->
+<script type="application/ld+json">
+{
+    "@context": "https://schema.org",
+    "@type": "FinancialProduct",
+    "name": "<?php echo esc_attr(get_the_title()); ?>",
+    "description": "<?php echo esc_attr($meta_description); ?>",
+    "provider": {
+        "@type": "FinancialService",
+        "name": "<?php echo esc_attr($bank_name); ?>"
+    },
+    "feesAndCommissionsSpecification": "Annual Fee: ₹<?php echo esc_attr(number_format($annual_fee)); ?>, Joining Fee: ₹<?php echo esc_attr(number_format($joining_fee)); ?>",
+    "interestRate": "<?php echo esc_attr(ccm_get_meta($post_id, 'interest_rate', 'Varies')); ?>",
+    "amount": {
+        "@type": "MonetaryAmount",
+        "currency": "INR",
+        "value": "<?php echo esc_attr($annual_fee); ?>"
+    }
+}
+</script>
 
 <style>
     /* Tailwind-inspired CSS for the template */
@@ -164,6 +304,28 @@ if (!is_wp_error($network_terms) && !empty($network_terms)) {
 </style>
 
 <div class="cc-body">
+    <!-- Breadcrumb Navigation -->
+    <nav class="cc-breadcrumb" style="background: white; padding: 1rem 1.5rem; border-bottom: 1px solid var(--cc-gray-200);">
+        <ol style="display: flex; align-items: center; gap: 0.5rem; margin: 0; padding: 0; list-style: none; font-size: 0.875rem; color: var(--cc-gray-600);">
+            <?php foreach ($breadcrumbs as $index => $breadcrumb): ?>
+                <li style="display: flex; align-items: center; gap: 0.5rem;">
+                    <?php if ($index > 0): ?>
+                        <span style="color: var(--cc-gray-400);">›</span>
+                    <?php endif; ?>
+                    <?php if ($index < count($breadcrumbs) - 1): ?>
+                        <a href="<?php echo esc_url($breadcrumb['url']); ?>" style="color: var(--cc-blue-600); text-decoration: none; hover: text-decoration: underline;">
+                            <?php echo esc_html($breadcrumb['name']); ?>
+                        </a>
+                    <?php else: ?>
+                        <span style="color: var(--cc-gray-800); font-weight: 500;">
+                            <?php echo esc_html($breadcrumb['name']); ?>
+                        </span>
+                    <?php endif; ?>
+                </li>
+            <?php endforeach; ?>
+        </ol>
+    </nav>
+
     <main id="primary" class="site-main">
         <article id="post-<?php the_ID(); ?>" <?php post_class(); ?>>
             

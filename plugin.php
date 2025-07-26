@@ -199,6 +199,36 @@ class CreditCardManager {
             wp_insert_term('Discover', 'network-type');
             wp_insert_term('RuPay', 'network-type');
         }
+        
+        // Store/Bank Taxonomy
+        $store_labels = array(
+            'name'              => _x('Banks/Stores', 'taxonomy general name', 'credit-card-manager'),
+            'singular_name'     => _x('Bank/Store', 'taxonomy singular name', 'credit-card-manager'),
+            'search_items'      => __('Search Banks/Stores', 'credit-card-manager'),
+            'all_items'         => __('All Banks/Stores', 'credit-card-manager'),
+            'parent_item'       => __('Parent Bank/Store', 'credit-card-manager'),
+            'parent_item_colon' => __('Parent Bank/Store:', 'credit-card-manager'),
+            'edit_item'         => __('Edit Bank/Store', 'credit-card-manager'),
+            'update_item'       => __('Update Bank/Store', 'credit-card-manager'),
+            'add_new_item'      => __('Add New Bank/Store', 'credit-card-manager'),
+            'new_item_name'     => __('New Bank/Store Name', 'credit-card-manager'),
+            'menu_name'         => __('Banks/Stores', 'credit-card-manager'),
+        );
+        
+        $store_args = array(
+            'hierarchical'      => false,
+            'labels'            => $store_labels,
+            'show_ui'           => true,
+            'show_admin_column' => true,
+            'show_in_rest'      => true,
+            'rest_base'         => 'stores',
+            'query_var'         => true,
+            'rewrite'           => array('slug' => 'store'),
+        );
+        
+        register_taxonomy('store', array('credit-card'), $store_args);
+        
+       
     }
     
  /**
@@ -619,6 +649,29 @@ public function register_meta_fields() {
                     </div>
                 </div>
                 
+                <!-- <div class="ccm-field">
+                    <label for="bank_name"><?php _e('Bank/Issuer', 'credit-card-manager'); ?></label>
+                    <?php
+                    $selected_bank = wp_get_post_terms($post->ID, 'store', array('fields' => 'ids'));
+                    $selected_bank_id = !empty($selected_bank) ? $selected_bank[0] : '';
+                    
+                    $banks = get_terms(array(
+                        'taxonomy' => 'store',
+                        'hide_empty' => false,
+                    ));
+                    ?>
+                    <select id="bank_name" name="bank_name">
+                        <option value=""><?php _e('Select Bank/Issuer', 'credit-card-manager'); ?></option>
+                        <?php if (!empty($banks) && !is_wp_error($banks)): ?>
+                            <?php foreach ($banks as $bank): ?>
+                                <option value="<?php echo esc_attr($bank->term_id); ?>" <?php selected($selected_bank_id, $bank->term_id); ?>>
+                                    <?php echo esc_html($bank->name); ?>
+                                </option>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
+                    </select>
+                </div> -->
+                
                 <div class="ccm-field">
                     <label for="rating"><?php _e('Rating (0-5)', 'credit-card-manager'); ?></label>
                     <input type="number" id="rating" name="rating" value="<?php echo esc_attr($rating); ?>" min="0" max="5" step="0.1" />
@@ -884,6 +937,15 @@ public function register_meta_fields() {
                $clean_array = array_filter(array_map('sanitize_text_field', $_POST[$field]));
                update_post_meta($post_id, $field, $clean_array);
            }
+       }
+       
+       // Save bank name (store taxonomy)
+       if (isset($_POST['bank_name']) && !empty($_POST['bank_name'])) {
+           $bank_id = absint($_POST['bank_name']);
+           wp_set_post_terms($post_id, array($bank_id), 'store', false);
+       } else {
+           // Remove bank association if no bank selected
+           wp_set_post_terms($post_id, array(), 'store', false);
        }
    }
    

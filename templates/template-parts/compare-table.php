@@ -40,8 +40,6 @@ if (!isset($compare_cards)) {
                         <td class="compare-value compare-card-image-cell">
                             <?php if (has_post_thumbnail($card['id'])): ?>
                                 <?php echo get_the_post_thumbnail($card['id'], 'medium'); ?>
-                            <?php else: ?>
-                                <img src="<?php echo esc_url(ccm_get_meta($card['id'], 'card_image_url', '')); ?>" alt="<?php echo esc_attr($card['title']); ?>" />
                             <?php endif; ?>
                         </td>
                     <?php endforeach; ?>

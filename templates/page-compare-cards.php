@@ -126,10 +126,7 @@ if (!function_exists('ccm_has_seo_plugin') || !ccm_has_seo_plugin()) {
         <section class="compare-overview">
             <?php foreach ($compare_cards as $card): ?>
                 <?php 
-                $card_image = ccm_get_meta($card['id'], 'card_image_url', '');
-                if (empty($card_image) && has_post_thumbnail($card['id'])) {
-                    $card_image = get_the_post_thumbnail_url($card['id'], 'medium');
-                }
+                $card_image = has_post_thumbnail($card['id']) ? get_the_post_thumbnail_url($card['id'], 'medium') : '';
                 
                 $rating = ccm_get_meta($card['id'], 'rating', 0, true);
                 $review_count = ccm_get_meta($card['id'], 'review_count', 0, true);
@@ -324,38 +321,43 @@ document.addEventListener('DOMContentLoaded', function() {
 }
 </script>
 
-<!-- FAQ Schema for comparison questions -->
-<script type="application/ld+json">
-{
-    "@context": "https://schema.org",
-    "@type": "FAQPage",
-    "mainEntity": [
-        {
-            "@type": "Question",
-            "name": "How do I compare credit cards effectively?",
-            "acceptedAnswer": {
-                "@type": "Answer",
-                "text": "To compare credit cards effectively, focus on key factors like annual fees, interest rates, reward programs, welcome bonuses, and additional benefits. Consider your spending patterns and financial goals to choose the card that offers the most value for your lifestyle."
-            }
-        },
-        {
-            "@type": "Question",
-            "name": "What should I look for when comparing credit card fees?",
-            "acceptedAnswer": {
-                "@type": "Answer",
-                "text": "When comparing credit card fees, examine the annual fee, joining fee, late payment charges, over-limit fees, and foreign transaction fees. Some cards waive annual fees for the first year or permanently if you meet certain spending criteria."
-            }
-        },
-        {
-            "@type": "Question",
-            "name": "Which credit card rewards program is best?",
-            "acceptedAnswer": {
-                "@type": "Answer",
-                "text": "The best credit card rewards program depends on your spending habits. Cashback cards offer simplicity, points-based cards provide flexibility, and travel cards are ideal for frequent travelers. Compare earning rates, redemption options, and expiration policies."
-            }
+<?php
+// Generate dynamic FAQ schema based on compared cards
+if (!empty($compare_cards)) {
+    $all_comparison_faqs = array();
+    
+    // Add generic comparison FAQs
+    $all_comparison_faqs[] = array(
+        'question' => 'How do I compare credit cards effectively?',
+        'answer' => 'To compare credit cards effectively, focus on key factors like annual fees, interest rates, reward programs, welcome bonuses, and additional benefits. Consider your spending patterns and financial goals to choose the card that offers the most value for your lifestyle.'
+    );
+    
+    // Generate FAQs specific to the cards being compared
+    foreach ($compare_cards as $card) {
+        $card_faqs = ccm_get_card_faqs($card['id']);
+        if (!empty($card_faqs)) {
+            // Take only the first 2 FAQs from each card to avoid too many
+            $all_comparison_faqs = array_merge($all_comparison_faqs, array_slice($card_faqs, 0, 2));
         }
-    ]
+    }
+    
+    // Add comparison-specific FAQs
+    if (count($compare_cards) > 1) {
+        $card_names = wp_list_pluck($compare_cards, 'title');
+        $all_comparison_faqs[] = array(
+            'question' => 'What are the key differences between ' . implode(' and ', $card_names) . '?',
+            'answer' => 'The main differences lie in annual fees, reward structures, welcome bonuses, and target customer segments. Compare the fee structures, earning rates, and benefits that align with your spending patterns to make the best choice.'
+        );
+    }
+    
+    // Generate and output FAQ schema
+    $faq_schema = ccm_generate_faq_schema($all_comparison_faqs);
+    if ($faq_schema) {
+        echo '<script type="application/ld+json">' . "\n";
+        echo wp_json_encode($faq_schema, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) . "\n";
+        echo '</script>' . "\n";
+    }
 }
-</script>
+?>
 
 <?php get_footer(); ?>

@@ -156,7 +156,7 @@ class CreditCardManager {
             'menu_position'      => 5,
             'menu_icon'          => 'dashicons-id-alt',
             'supports'           => array('title', 'editor', 'thumbnail', 'excerpt', 'custom-fields', 'comments'),
-            'taxonomies'         => array('store', 'category', 'network-type'),
+            'taxonomies'         => array('store', 'card-category', 'network-type'),
         );
         
         register_post_type('credit-card', $args);
@@ -231,7 +231,45 @@ class CreditCardManager {
         
         register_taxonomy('store', array('credit-card'), $store_args);
         
-       
+        // Card Categories Taxonomy
+        $category_labels = array(
+            'name'              => _x('Card Categories', 'taxonomy general name', 'credit-card-manager'),
+            'singular_name'     => _x('Card Category', 'taxonomy singular name', 'credit-card-manager'),
+            'search_items'      => __('Search Categories', 'credit-card-manager'),
+            'all_items'         => __('All Categories', 'credit-card-manager'),
+            'parent_item'       => __('Parent Category', 'credit-card-manager'),
+            'parent_item_colon' => __('Parent Category:', 'credit-card-manager'),
+            'edit_item'         => __('Edit Category', 'credit-card-manager'),
+            'update_item'       => __('Update Category', 'credit-card-manager'),
+            'add_new_item'      => __('Add New Category', 'credit-card-manager'),
+            'new_item_name'     => __('New Category Name', 'credit-card-manager'),
+            'menu_name'         => __('Card Categories', 'credit-card-manager'),
+        );
+        
+        $category_args = array(
+            'hierarchical'      => true,
+            'labels'            => $category_labels,
+            'show_ui'           => true,
+            'show_admin_column' => true,
+            'show_in_rest'      => true,
+            'rest_base'         => 'card-categories',
+            'query_var'         => true,
+            'rewrite'           => array('slug' => 'card-category'),
+        );
+        
+        register_taxonomy('card-category', array('credit-card'), $category_args);
+        
+        // Add default card categories
+        if (!term_exists('Cashback', 'card-category')) {
+            wp_insert_term('Cashback', 'card-category', array('description' => 'Cards offering cashback rewards'));
+            wp_insert_term('Travel', 'card-category', array('description' => 'Travel and airline credit cards'));
+            wp_insert_term('Rewards', 'card-category', array('description' => 'General rewards credit cards'));
+            wp_insert_term('Business', 'card-category', array('description' => 'Business and corporate credit cards'));
+            wp_insert_term('Premium', 'card-category', array('description' => 'Premium and luxury credit cards'));
+            wp_insert_term('Secured', 'card-category', array('description' => 'Secured credit cards'));
+            wp_insert_term('Student', 'card-category', array('description' => 'Student credit cards'));
+            wp_insert_term('No Annual Fee', 'card-category', array('description' => 'Cards with no annual fee'));
+        }
     }
     
  /**
@@ -239,13 +277,6 @@ class CreditCardManager {
  */
 public function register_meta_fields() {
     $meta_fields = array(
-        'card_image_url' => array(
-            'type' => 'string',
-            'description' => 'Credit card image URL',
-            'single' => true,
-            'sanitize_callback' => 'esc_url_raw',
-            'show_in_rest' => true,
-        ),
         'rating' => array(
             'type' => 'number',
             'description' => 'Card rating (0-5)',
@@ -293,6 +324,27 @@ public function register_meta_fields() {
             'description' => 'Type of welcome bonus (points/money)',
             'single' => true,
             'sanitize_callback' => 'sanitize_text_field',
+            'show_in_rest' => true,
+        ),
+        'reward_type' => array(
+            'type' => 'string',
+            'description' => 'Primary reward type (points, cashback, neucoins, etc.)',
+            'single' => true,
+            'sanitize_callback' => 'sanitize_text_field',
+            'show_in_rest' => true,
+        ),
+        'reward_conversion_rate' => array(
+            'type' => 'string',
+            'description' => 'Reward conversion rate description (e.g., 1 neucoin = 1 rupee)',
+            'single' => true,
+            'sanitize_callback' => 'sanitize_text_field',
+            'show_in_rest' => true,
+        ),
+        'reward_conversion_value' => array(
+            'type' => 'number',
+            'description' => 'Numerical conversion value for calculations',
+            'single' => true,
+            'sanitize_callback' => array($this, 'sanitize_decimal'),
             'show_in_rest' => true,
         ),
         'cashback_rate' => array(
@@ -552,6 +604,24 @@ public function register_meta_fields() {
             'sanitize_callback' => array($this, 'sanitize_rating'),
             'show_in_rest' => true,
         ),
+        'custom_faqs' => array(
+            'type' => 'array',
+            'description' => 'Custom FAQs for this card',
+            'single' => true,
+            'sanitize_callback' => array($this, 'sanitize_complex_array'),
+            'show_in_rest' => array(
+                'schema' => array(
+                    'type' => 'array',
+                    'items' => array(
+                        'type' => 'object',
+                        'properties' => array(
+                            'question' => array('type' => 'string'),
+                            'answer' => array('type' => 'string')
+                        )
+                    )
+                )
+            ),
+        ),
         'reward_rate' => array(
             'type' => 'number',
             'description' => 'Reward rate percentage',
@@ -591,7 +661,6 @@ public function register_meta_fields() {
         wp_nonce_field('credit_card_meta_box', 'credit_card_meta_box_nonce');
         
         // Get current values
-        $card_image_url = get_post_meta($post->ID, 'card_image_url', true);
         $rating = get_post_meta($post->ID, 'rating', true);
         $review_count = get_post_meta($post->ID, 'review_count', true);
         $annual_fee = get_post_meta($post->ID, 'annual_fee', true);
@@ -600,6 +669,9 @@ public function register_meta_fields() {
         $welcome_bonus_points = get_post_meta($post->ID, 'welcome_bonus_points', true);
         $welcome_bonus_type = get_post_meta($post->ID, 'welcome_bonus_type', true);
         $cashback_rate = get_post_meta($post->ID, 'cashback_rate', true);
+        $reward_type = get_post_meta($post->ID, 'reward_type', true);
+        $reward_conversion_rate = get_post_meta($post->ID, 'reward_conversion_rate', true);
+        $reward_conversion_value = get_post_meta($post->ID, 'reward_conversion_value', true);
         $credit_limit = get_post_meta($post->ID, 'credit_limit', true);
         $interest_rate = get_post_meta($post->ID, 'interest_rate', true);
         $processing_time = get_post_meta($post->ID, 'processing_time', true);
@@ -633,24 +705,124 @@ public function register_meta_fields() {
                 .ccm-add-item { background: #28a745; color: white; border: none; padding: 5px 15px; cursor: pointer; }
                 .ccm-checkbox-group { display: flex; align-items: center; gap: 10px; }
                 .ccm-image-upload { border: 1px solid #ddd; padding: 15px; background: white; }
+                .ccm-faq-item { border: 1px solid #e0e0e0; padding: 15px; margin-bottom: 15px; background: white; border-radius: 4px; }
+                .ccm-faq-item .ccm-field { margin-bottom: 10px; }
+                .ccm-faq-item textarea { width: 100%; max-width: 100%; min-height: 80px; resize: vertical; }
+                .ccm-json-import { background: #f0f8ff; border: 2px solid #007cba; border-radius: 8px; padding: 20px; margin-bottom: 20px; }
+                .ccm-json-import h3 { color: #007cba; margin-top: 0; }
+                .ccm-json-textarea { width: 100%; height: 200px; font-family: monospace; font-size: 12px; border: 1px solid #ccc; padding: 10px; }
+                .ccm-json-buttons { margin-top: 10px; }
+                .ccm-json-btn { background: #007cba; color: white; border: none; padding: 8px 16px; cursor: pointer; margin-right: 10px; border-radius: 4px; }
+                .ccm-json-btn:hover { background: #005a87; }
+                .ccm-json-btn.secondary { background: #666; }
+                .ccm-json-btn.secondary:hover { background: #444; }
+                .ccm-json-status { margin-top: 10px; padding: 8px; border-radius: 4px; display: none; }
+                .ccm-json-status.success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+                .ccm-json-status.error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
             </style>
+            
+            <!-- JSON Import Section -->
+            <div class="ccm-json-import">
+                <h3><?php _e('🤖 AI Data Import', 'credit-card-manager'); ?></h3>
+                <p><?php _e('Paste JSON data generated by AI to automatically fill all fields. This will save you time when adding new credit cards.', 'credit-card-manager'); ?></p>
+                
+                <textarea id="ccm-json-input" class="ccm-json-textarea" placeholder="Paste your JSON data here...">{
+  "basic": {
+    "rating": 4.5,
+    "review_count": 1250,
+    "featured": true,
+    "trending": false
+  },
+  "fees": {
+    "annual_fee": 2500,
+    "joining_fee": 2500,
+    "welcome_bonus": "10,000 reward points worth ₹2,500",
+    "welcome_bonus_points": 10000,
+    "welcome_bonus_type": "points",
+    "cashback_rate": "Up to 4% reward rate"
+  },
+  "rewards": {
+    "reward_type": "Points",
+    "reward_conversion_rate": "1 Point = 0.25 Rupee",
+    "reward_conversion_value": 0.25
+  },
+  "eligibility": {
+    "credit_limit": "Up to ₹10,00,000",
+    "interest_rate": "3.49% per month",
+    "processing_time": "7-10 working days",
+    "min_income": "₹6,00,000 annually",
+    "min_age": "21",
+    "max_age": "65"
+  },
+  "lists": {
+    "pros": [
+      "High reward rate on dining and entertainment",
+      "Complimentary airport lounge access",
+      "No foreign transaction fees"
+    ],
+    "cons": [
+      "High annual fee",
+      "Limited reward categories"
+    ],
+    "best_for": [
+      "Frequent travelers",
+      "Dining enthusiasts",
+      "Premium lifestyle"
+    ],
+    "documents": [
+      "PAN Card",
+      "Aadhaar Card",
+      "Salary slips (last 3 months)",
+      "Bank statements (last 6 months)"
+    ]
+  },
+  "custom_faqs": [
+    {
+      "question": "What is the welcome bonus for this card?",
+      "answer": "New cardholders can earn 10,000 reward points worth ₹2,500 on meeting the minimum spend requirement."
+    },
+    {
+      "question": "Are there any foreign transaction fees?",
+      "answer": "No, this card has zero foreign transaction fees, making it ideal for international travel."
+    }
+  ]
+}</textarea>
+                
+                <div class="ccm-json-buttons">
+                    <button type="button" id="ccm-import-json" class="ccm-json-btn">
+                        <?php _e('📥 Import JSON Data', 'credit-card-manager'); ?>
+                    </button>
+                    <button type="button" id="ccm-export-json" class="ccm-json-btn secondary">
+                        <?php _e('📤 Export Current Data', 'credit-card-manager'); ?>
+                    </button>
+                    <button type="button" id="ccm-clear-json" class="ccm-json-btn secondary">
+                        <?php _e('🗑️ Clear', 'credit-card-manager'); ?>
+                    </button>
+                </div>
+                
+                <div id="ccm-json-status" class="ccm-json-status"></div>
+                
+                <details style="margin-top: 15px;">
+                    <summary style="cursor: pointer; font-weight: bold;"><?php _e('📖 JSON Format Guide', 'credit-card-manager'); ?></summary>
+                    <div style="margin-top: 10px; font-size: 12px; color: #666;">
+                        <p><strong>Required sections:</strong></p>
+                        <ul>
+                            <li><code>basic</code> - Rating, review count, featured/trending flags</li>
+                            <li><code>fees</code> - Annual fee, joining fee, welcome bonus details</li>
+                            <li><code>rewards</code> - Reward type and conversion rates</li>
+                            <li><code>eligibility</code> - Income, age, processing time requirements</li>
+                            <li><code>lists</code> - Arrays for pros, cons, best_for, documents</li>
+                            <li><code>custom_faqs</code> - Array of question/answer objects</li>
+                        </ul>
+                        <p><strong>Tips:</strong> All fields are optional. Missing fields will keep existing values.</p>
+                    </div>
+                </details>
+            </div>
             
             <div class="ccm-field-group">
                 <h3><?php _e('Basic Information', 'credit-card-manager'); ?></h3>
                 
-                <div class="ccm-field">
-                    <label><?php _e('Card Image', 'credit-card-manager'); ?></label>
-                    <div class="ccm-image-upload">
-                        <input type="hidden" id="card_image_id" name="card_image_id" value="<?php echo esc_attr(get_post_meta($post->ID, 'card_image_id', true)); ?>" />
-                        <input type="text" id="card_image_url" name="card_image_url" value="<?php echo esc_url($card_image_url); ?>" placeholder="<?php _e('Enter image URL or upload image', 'credit-card-manager'); ?>" />
-                        <button type="button" class="button" id="upload_image_button"><?php _e('Upload Image', 'credit-card-manager'); ?></button>
-                        <div id="image_preview" style="margin-top: 10px;">
-                            <?php if ($card_image_url): ?>
-                                <img src="<?php echo esc_url($card_image_url); ?>" style="max-width: 200px; height: auto;" />
-                            <?php endif; ?>
-                        </div>
-                    </div>
-                </div>
+                <!-- Card Image removed - using Featured Image instead -->
                 
                 <!-- <div class="ccm-field">
                     <label for="bank_name"><?php _e('Bank/Issuer', 'credit-card-manager'); ?></label>
@@ -736,6 +908,30 @@ public function register_meta_fields() {
                 <div class="ccm-field">
                     <label for="cashback_rate"><?php _e('Cashback/Reward Rate', 'credit-card-manager'); ?></label>
                     <input type="text" id="cashback_rate" name="cashback_rate" value="<?php echo esc_attr($cashback_rate); ?>" placeholder="Up to 4% reward rate" />
+                </div>
+                
+                <div class="ccm-field">
+                    <label for="reward_type"><?php _e('Primary Reward Type', 'credit-card-manager'); ?></label>
+                    <input type="text" id="reward_type" name="reward_type" value="<?php echo esc_attr($reward_type); ?>" placeholder="e.g., Points, Cashback, NeuCoins, Scapia Coins" />
+                    <small style="color: #666; font-size: 12px; display: block; margin-top: 5px;">
+                        <?php _e('Enter the type of rewards this card offers (Points, Cashback, NeuCoins, Scapia Coins, etc.)', 'credit-card-manager'); ?>
+                    </small>
+                </div>
+                
+                <div class="ccm-field">
+                    <label for="reward_conversion_rate"><?php _e('Reward Conversion Rate', 'credit-card-manager'); ?></label>
+                    <input type="text" id="reward_conversion_rate" name="reward_conversion_rate" value="<?php echo esc_attr($reward_conversion_rate); ?>" placeholder="e.g., 1 NeuCoin = 1 Rupee" />
+                    <small style="color: #666; font-size: 12px; display: block; margin-top: 5px;">
+                        <?php _e('Describe how the rewards convert to real value (e.g., "1 NeuCoin = 1 Rupee", "100 Points = 25 Rupees")', 'credit-card-manager'); ?>
+                    </small>
+                </div>
+                
+                <div class="ccm-field">
+                    <label for="reward_conversion_value"><?php _e('Conversion Value (for calculations)', 'credit-card-manager'); ?></label>
+                    <input type="number" id="reward_conversion_value" name="reward_conversion_value" value="<?php echo esc_attr($reward_conversion_value); ?>" step="0.01" min="0" placeholder="1.00" />
+                    <small style="color: #666; font-size: 12px; display: block; margin-top: 5px;">
+                        <?php _e('Numerical value for calculations. E.g., if 1 NeuCoin = 1 Rupee, enter 1.00. If 100 Points = 25 Rupees, enter 0.25', 'credit-card-manager'); ?>
+                    </small>
                 </div>
             </div>
             
@@ -857,6 +1053,45 @@ public function register_meta_fields() {
                    <button type="button" class="ccm-add-item" onclick="addArrayItem('documents-field', 'documents[]', 'Enter required document')"><?php _e('Add Document', 'credit-card-manager'); ?></button>
                </div>
            </div>
+       
+       <div class="ccm-field-group">
+           <h3><?php _e('Frequently Asked Questions (FAQs)', 'credit-card-manager'); ?></h3>
+           <div class="ccm-array-field" id="custom-faqs-field">
+               <?php 
+               $custom_faqs = get_post_meta($post->ID, 'custom_faqs', true) ?: array();
+               if (!empty($custom_faqs)): ?>
+                   <?php foreach ($custom_faqs as $index => $faq): ?>
+                       <div class="ccm-faq-item">
+                           <div class="ccm-field">
+                               <label><?php _e('Question', 'credit-card-manager'); ?></label>
+                               <input type="text" name="custom_faqs[<?php echo $index; ?>][question]" value="<?php echo esc_attr($faq['question']); ?>" placeholder="Enter FAQ question" />
+                           </div>
+                           <div class="ccm-field">
+                               <label><?php _e('Answer', 'credit-card-manager'); ?></label>
+                               <textarea name="custom_faqs[<?php echo $index; ?>][answer]" rows="3" placeholder="Enter FAQ answer"><?php echo esc_textarea($faq['answer']); ?></textarea>
+                           </div>
+                           <button type="button" class="ccm-remove-item" onclick="removeFaqItem(this)"><?php _e('Remove FAQ', 'credit-card-manager'); ?></button>
+                       </div>
+                   <?php endforeach; ?>
+               <?php else: ?>
+                   <div class="ccm-faq-item">
+                       <div class="ccm-field">
+                           <label><?php _e('Question', 'credit-card-manager'); ?></label>
+                           <input type="text" name="custom_faqs[0][question]" value="" placeholder="Enter FAQ question" />
+                       </div>
+                       <div class="ccm-field">
+                           <label><?php _e('Answer', 'credit-card-manager'); ?></label>
+                           <textarea name="custom_faqs[0][answer]" rows="3" placeholder="Enter FAQ answer"></textarea>
+                       </div>
+                       <button type="button" class="ccm-remove-item" onclick="removeFaqItem(this)"><?php _e('Remove FAQ', 'credit-card-manager'); ?></button>
+                   </div>
+               <?php endif; ?>
+               <button type="button" class="ccm-add-item" onclick="addFaqItem()"><?php _e('Add FAQ', 'credit-card-manager'); ?></button>
+           </div>
+           <p style="color: #666; font-size: 12px; margin-top: 10px;">
+               <?php _e('Add custom FAQs specific to this credit card. These will be displayed along with automatically generated FAQs based on card data.', 'credit-card-manager'); ?>
+           </p>
+       </div>
        </div>
        
        <script>
@@ -878,6 +1113,246 @@ public function register_meta_fields() {
                item.remove();
            }
        }
+       
+       function addFaqItem() {
+           const container = document.getElementById('custom-faqs-field');
+           const existingItems = container.querySelectorAll('.ccm-faq-item');
+           const newIndex = existingItems.length;
+           
+           const newItem = document.createElement('div');
+           newItem.className = 'ccm-faq-item';
+           newItem.innerHTML = `
+               <div class="ccm-field">
+                   <label><?php _e('Question', 'credit-card-manager'); ?></label>
+                   <input type="text" name="custom_faqs[${newIndex}][question]" value="" placeholder="Enter FAQ question" />
+               </div>
+               <div class="ccm-field">
+                   <label><?php _e('Answer', 'credit-card-manager'); ?></label>
+                   <textarea name="custom_faqs[${newIndex}][answer]" rows="3" placeholder="Enter FAQ answer"></textarea>
+               </div>
+               <button type="button" class="ccm-remove-item" onclick="removeFaqItem(this)"><?php _e('Remove FAQ', 'credit-card-manager'); ?></button>
+           `;
+           
+           const addButton = container.querySelector('.ccm-add-item');
+           container.insertBefore(newItem, addButton);
+       }
+       
+       function removeFaqItem(button) {
+           const item = button.parentElement;
+           const container = item.parentElement;
+           if (container.querySelectorAll('.ccm-faq-item').length > 1) {
+               item.remove();
+               // Reindex the remaining items
+               const items = container.querySelectorAll('.ccm-faq-item');
+               items.forEach((item, index) => {
+                   const questionInput = item.querySelector('input[type="text"]');
+                   const answerTextarea = item.querySelector('textarea');
+                   if (questionInput) questionInput.name = `custom_faqs[${index}][question]`;
+                   if (answerTextarea) answerTextarea.name = `custom_faqs[${index}][answer]`;
+               });
+           }
+       }
+       
+       // JSON Import/Export Functions
+       function showStatus(message, type) {
+           const status = document.getElementById('ccm-json-status');
+           status.textContent = message;
+           status.className = 'ccm-json-status ' + type;
+           status.style.display = 'block';
+           setTimeout(() => {
+               status.style.display = 'none';
+           }, 5000);
+       }
+       
+       function setFieldValue(fieldId, value) {
+           const field = document.getElementById(fieldId);
+           if (field) {
+               if (field.type === 'checkbox') {
+                   field.checked = Boolean(value);
+               } else {
+                   field.value = value;
+               }
+           }
+       }
+       
+       function setArrayField(containerId, values, inputName) {
+           const container = document.getElementById(containerId);
+           if (!container || !Array.isArray(values)) return;
+           
+           // Clear existing items except the last one (template)
+           const existingItems = container.querySelectorAll('.ccm-array-item');
+           existingItems.forEach((item, index) => {
+               if (index < existingItems.length - 1) {
+                   item.remove();
+               }
+           });
+           
+           // Add new items
+           values.forEach((value, index) => {
+               if (index === 0) {
+                   // Use the existing first item
+                   const firstInput = container.querySelector('.ccm-array-item input');
+                   if (firstInput) firstInput.value = value;
+               } else {
+                   // Add new items
+                   addArrayItem(containerId, inputName, 'Enter value');
+                   const newInput = container.querySelectorAll('.ccm-array-item input')[index];
+                   if (newInput) newInput.value = value;
+               }
+           });
+       }
+       
+       function setFaqField(faqs) {
+           const container = document.getElementById('custom-faqs-field');
+           if (!container || !Array.isArray(faqs)) return;
+           
+           // Clear existing FAQ items
+           const existingItems = container.querySelectorAll('.ccm-faq-item');
+           existingItems.forEach(item => item.remove());
+           
+           // Add FAQ items
+           faqs.forEach((faq, index) => {
+               addFaqItem();
+               const faqItems = container.querySelectorAll('.ccm-faq-item');
+               const currentItem = faqItems[index];
+               if (currentItem) {
+                   const questionInput = currentItem.querySelector('input[type="text"]');
+                   const answerTextarea = currentItem.querySelector('textarea');
+                   if (questionInput) questionInput.value = faq.question || '';
+                   if (answerTextarea) answerTextarea.value = faq.answer || '';
+               }
+           });
+           
+           // Add one empty item if no FAQs
+           if (faqs.length === 0) {
+               addFaqItem();
+           }
+       }
+       
+       document.getElementById('ccm-import-json').addEventListener('click', function() {
+           try {
+               const jsonText = document.getElementById('ccm-json-input').value.trim();
+               if (!jsonText) {
+                   showStatus('Please paste JSON data first.', 'error');
+                   return;
+               }
+               
+               const data = JSON.parse(jsonText);
+               let importedFields = 0;
+               
+               // Import basic fields
+               if (data.basic) {
+                   if (data.basic.rating !== undefined) { setFieldValue('rating', data.basic.rating); importedFields++; }
+                   if (data.basic.review_count !== undefined) { setFieldValue('review_count', data.basic.review_count); importedFields++; }
+                   if (data.basic.featured !== undefined) { setFieldValue('featured', data.basic.featured); importedFields++; }
+                   if (data.basic.trending !== undefined) { setFieldValue('trending', data.basic.trending); importedFields++; }
+               }
+               
+               // Import fees
+               if (data.fees) {
+                   if (data.fees.annual_fee !== undefined) { setFieldValue('annual_fee', data.fees.annual_fee); importedFields++; }
+                   if (data.fees.joining_fee !== undefined) { setFieldValue('joining_fee', data.fees.joining_fee); importedFields++; }
+                   if (data.fees.welcome_bonus !== undefined) { setFieldValue('welcome_bonus', data.fees.welcome_bonus); importedFields++; }
+                   if (data.fees.welcome_bonus_points !== undefined) { setFieldValue('welcome_bonus_points', data.fees.welcome_bonus_points); importedFields++; }
+                   if (data.fees.welcome_bonus_type !== undefined) { setFieldValue('welcome_bonus_type', data.fees.welcome_bonus_type); importedFields++; }
+                   if (data.fees.cashback_rate !== undefined) { setFieldValue('cashback_rate', data.fees.cashback_rate); importedFields++; }
+               }
+               
+               // Import rewards
+               if (data.rewards) {
+                   if (data.rewards.reward_type !== undefined) { setFieldValue('reward_type', data.rewards.reward_type); importedFields++; }
+                   if (data.rewards.reward_conversion_rate !== undefined) { setFieldValue('reward_conversion_rate', data.rewards.reward_conversion_rate); importedFields++; }
+                   if (data.rewards.reward_conversion_value !== undefined) { setFieldValue('reward_conversion_value', data.rewards.reward_conversion_value); importedFields++; }
+               }
+               
+               // Import eligibility
+               if (data.eligibility) {
+                   if (data.eligibility.credit_limit !== undefined) { setFieldValue('credit_limit', data.eligibility.credit_limit); importedFields++; }
+                   if (data.eligibility.interest_rate !== undefined) { setFieldValue('interest_rate', data.eligibility.interest_rate); importedFields++; }
+                   if (data.eligibility.processing_time !== undefined) { setFieldValue('processing_time', data.eligibility.processing_time); importedFields++; }
+                   if (data.eligibility.min_income !== undefined) { setFieldValue('min_income', data.eligibility.min_income); importedFields++; }
+                   if (data.eligibility.min_age !== undefined) { setFieldValue('min_age', data.eligibility.min_age); importedFields++; }
+                   if (data.eligibility.max_age !== undefined) { setFieldValue('max_age', data.eligibility.max_age); importedFields++; }
+               }
+               
+               // Import lists
+               if (data.lists) {
+                   if (data.lists.pros) { setArrayField('pros-field', data.lists.pros, 'pros[]'); importedFields++; }
+                   if (data.lists.cons) { setArrayField('cons-field', data.lists.cons, 'cons[]'); importedFields++; }
+                   if (data.lists.best_for) { setArrayField('best_for-field', data.lists.best_for, 'best_for[]'); importedFields++; }
+                   if (data.lists.documents) { setArrayField('documents-field', data.lists.documents, 'documents[]'); importedFields++; }
+               }
+               
+               // Import custom FAQs
+               if (data.custom_faqs) {
+                   setFaqField(data.custom_faqs);
+                   importedFields++;
+               }
+               
+               showStatus(`✅ Successfully imported ${importedFields} field groups from JSON!`, 'success');
+               
+           } catch (error) {
+               showStatus('❌ Invalid JSON format. Please check your data and try again.', 'error');
+               console.error('JSON Import Error:', error);
+           }
+       });
+       
+       document.getElementById('ccm-export-json').addEventListener('click', function() {
+           try {
+               const data = {
+                   basic: {
+                       rating: parseFloat(document.getElementById('rating')?.value || 0),
+                       review_count: parseInt(document.getElementById('review_count')?.value || 0),
+                       featured: document.getElementById('featured')?.checked || false,
+                       trending: document.getElementById('trending')?.checked || false
+                   },
+                   fees: {
+                       annual_fee: parseInt(document.getElementById('annual_fee')?.value || 0),
+                       joining_fee: parseInt(document.getElementById('joining_fee')?.value || 0),
+                       welcome_bonus: document.getElementById('welcome_bonus')?.value || '',
+                       welcome_bonus_points: parseInt(document.getElementById('welcome_bonus_points')?.value || 0),
+                       welcome_bonus_type: document.getElementById('welcome_bonus_type')?.value || 'points',
+                       cashback_rate: document.getElementById('cashback_rate')?.value || ''
+                   },
+                   rewards: {
+                       reward_type: document.getElementById('reward_type')?.value || '',
+                       reward_conversion_rate: document.getElementById('reward_conversion_rate')?.value || '',
+                       reward_conversion_value: parseFloat(document.getElementById('reward_conversion_value')?.value || 0)
+                   },
+                   eligibility: {
+                       credit_limit: document.getElementById('credit_limit')?.value || '',
+                       interest_rate: document.getElementById('interest_rate')?.value || '',
+                       processing_time: document.getElementById('processing_time')?.value || '',
+                       min_income: document.getElementById('min_income')?.value || '',
+                       min_age: document.getElementById('min_age')?.value || '',
+                       max_age: document.getElementById('max_age')?.value || ''
+                   },
+                   lists: {
+                       pros: Array.from(document.querySelectorAll('input[name="pros[]"]')).map(input => input.value).filter(v => v),
+                       cons: Array.from(document.querySelectorAll('input[name="cons[]"]')).map(input => input.value).filter(v => v),
+                       best_for: Array.from(document.querySelectorAll('input[name="best_for[]"]')).map(input => input.value).filter(v => v),
+                       documents: Array.from(document.querySelectorAll('input[name="documents[]"]')).map(input => input.value).filter(v => v)
+                   },
+                   custom_faqs: Array.from(document.querySelectorAll('.ccm-faq-item')).map(item => {
+                       const question = item.querySelector('input[type="text"]')?.value || '';
+                       const answer = item.querySelector('textarea')?.value || '';
+                       return { question, answer };
+                   }).filter(faq => faq.question || faq.answer)
+               };
+               
+               document.getElementById('ccm-json-input').value = JSON.stringify(data, null, 2);
+               showStatus('✅ Current form data exported to JSON textarea!', 'success');
+               
+           } catch (error) {
+               showStatus('❌ Error exporting data. Please try again.', 'error');
+               console.error('JSON Export Error:', error);
+           }
+       });
+       
+       document.getElementById('ccm-clear-json').addEventListener('click', function() {
+           document.getElementById('ccm-json-input').value = '';
+           showStatus('🗑️ JSON textarea cleared.', 'success');
+       });
        </script>
        <?php
    }
@@ -909,8 +1384,9 @@ public function register_meta_fields() {
        
        // Save simple fields
        $simple_fields = array(
-           'card_image_url', 'rating', 'review_count',
+           'rating', 'review_count',
            'welcome_bonus', 'welcome_bonus_points', 'welcome_bonus_type', 'cashback_rate',
+           'reward_type', 'reward_conversion_rate', 'reward_conversion_value',
            'credit_limit', 'interest_rate', 'processing_time', 'min_income',
            'min_age', 'max_age', 'apply_link', 'theme_color'
        );
@@ -940,6 +1416,22 @@ public function register_meta_fields() {
                $clean_array = array_filter(array_map('sanitize_text_field', $_POST[$field]));
                update_post_meta($post_id, $field, $clean_array);
            }
+       }
+       
+       // Save custom FAQs
+       if (isset($_POST['custom_faqs']) && is_array($_POST['custom_faqs'])) {
+           $clean_faqs = array();
+           foreach ($_POST['custom_faqs'] as $faq) {
+               if (!empty($faq['question']) || !empty($faq['answer'])) {
+                   $clean_faqs[] = array(
+                       'question' => sanitize_text_field($faq['question']),
+                       'answer' => sanitize_textarea_field($faq['answer'])
+                   );
+               }
+           }
+           update_post_meta($post_id, 'custom_faqs', $clean_faqs);
+       } else {
+           delete_post_meta($post_id, 'custom_faqs');
        }
        
        // Save bank name (store taxonomy)
@@ -977,10 +1469,7 @@ public function register_meta_fields() {
    public function admin_column_content($column, $post_id) {
        switch ($column) {
            case 'card_image':
-               $image_url = get_post_meta($post_id, 'card_image_url', true);
-               if ($image_url) {
-                   echo '<img src="' . esc_url($image_url) . '" style="width: 50px; height: auto;" />';
-               } elseif (has_post_thumbnail($post_id)) {
+               if (has_post_thumbnail($post_id)) {
                    echo get_the_post_thumbnail($post_id, array(50, 50));
                } else {
                    echo '-';
@@ -1161,7 +1650,7 @@ public function register_meta_fields() {
        
        if (!empty($params['category'])) {
            $args['tax_query'][] = array(
-               'taxonomy' => 'category',
+               'taxonomy' => 'card-category',
                'field'    => 'slug',
                'terms'    => explode(',', $params['category']),
            );
@@ -1339,7 +1828,7 @@ public function register_meta_fields() {
        
        // Get categories
        $categories = get_terms(array(
-           'taxonomy' => 'category',
+           'taxonomy' => 'card-category',
            'hide_empty' => true,
        ));
        
@@ -1390,7 +1879,7 @@ public function register_meta_fields() {
        // Get taxonomies
    $banks = wp_get_post_terms($post_id, 'store');
 $network_types = wp_get_post_terms($post_id, 'network-type');
-$categories = wp_get_post_terms($post_id, 'category');
+$categories = wp_get_post_terms($post_id, 'card-category');
 
 // Handle WP_Error cases
 if (is_wp_error($banks)) $banks = array();
@@ -1399,14 +1888,15 @@ if (is_wp_error($categories)) $categories = array();
        
        // Get meta fields
        $meta_fields = array(
-           'card_image_url', 'rating', 'review_count', 'annual_fee', 'joining_fee',
+           'rating', 'review_count', 'annual_fee', 'joining_fee',
            'welcome_bonus', 'welcome_bonus_points', 'welcome_bonus_type', 'cashback_rate',
+           'reward_type', 'reward_conversion_rate', 'reward_conversion_value',
            'credit_limit', 'interest_rate', 'processing_time', 'min_income',
            'min_age', 'max_age', 'pros', 'cons', 'best_for', 'features',
            'rewards', 'fees', 'eligibility', 'documents', 'apply_link',
            'featured', 'trending', 'gradient', 'bg_gradient', 'theme_color',
            'overall_score', 'reward_score', 'fees_score', 'benefits_score',
-           'support_score', 'reward_rate'
+           'support_score', 'reward_rate', 'custom_faqs'
        );
        
        $meta_data = array();
@@ -1452,7 +1942,7 @@ if (is_wp_error($categories)) $categories = array();
 }, $categories) : array(),
            
            // Meta data
-           'card_image' => $meta_data['card_image_url'] ?: $featured_image,
+           'card_image' => $featured_image,
            'rating' => floatval($meta_data['rating']),
            'review_count' => intval($meta_data['review_count']),
            'annual_fee' => $meta_data['annual_fee'],
@@ -1461,6 +1951,9 @@ if (is_wp_error($categories)) $categories = array();
            'welcome_bonus_points' => intval($meta_data['welcome_bonus_points']),
            'welcome_bonus_type' => $meta_data['welcome_bonus_type'],
            'cashback_rate' => $meta_data['cashback_rate'],
+           'reward_type' => $meta_data['reward_type'],
+           'reward_conversion_rate' => $meta_data['reward_conversion_rate'],
+           'reward_conversion_value' => floatval($meta_data['reward_conversion_value']),
            'credit_limit' => $meta_data['credit_limit'],
            'interest_rate' => $meta_data['interest_rate'],
            'processing_time' => $meta_data['processing_time'],
@@ -1487,6 +1980,7 @@ if (is_wp_error($categories)) $categories = array();
            'benefits_score' => floatval($meta_data['benefits_score']),
            'support_score' => floatval($meta_data['support_score']),
            'reward_rate' => floatval($meta_data['reward_rate']),
+           'custom_faqs' => $meta_data['custom_faqs'] ?: array(),
        );
    }
    
@@ -1537,7 +2031,7 @@ if (is_wp_error($categories)) $categories = array();
                $args['tax_query'] = array();
            }
            $args['tax_query'][] = array(
-               'taxonomy' => 'category',
+               'taxonomy' => 'card-category',
                'field'    => 'slug',
                'terms'    => explode(',', $params['category']),
            );
@@ -1699,6 +2193,10 @@ if (is_wp_error($categories)) $categories = array();
    public function sanitize_percentage($value) {
        $value = floatval($value);
        return max(0, min(100, $value));
+   }
+   
+   public function sanitize_decimal($value) {
+       return floatval($value);
    }
    
    public function sanitize_boolean($value) {

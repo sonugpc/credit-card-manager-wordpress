@@ -204,9 +204,9 @@ function ccm_generate_breadcrumb_schema($breadcrumbs) {
 }
 
 /**
- * Generate FAQ schema for common credit card questions
+ * Generate static FAQ schema for common credit card questions
  */
-function ccm_generate_faq_schema() {
+function ccm_generate_static_faq_schema() {
     return [
         '@context' => 'https://schema.org',
         '@type' => 'FAQPage',
@@ -381,16 +381,44 @@ function ccm_output_single_seo($post_id) {
 /**
  * Add credit card specific schema to RankMath
  */
-function ccm_rankmath_schema_credit_card($data, $post) {
-    if (get_post_type($post) !== 'credit-card') {
+function ccm_rankmath_schema_credit_card($data, $jsonld_instance = null) {
+    // Get current post ID
+    $post_id = get_the_ID();
+    
+    // If we don't have a valid post ID, try to get it from global $post
+    if (!$post_id) {
+        global $post;
+        if ($post && isset($post->ID)) {
+            $post_id = $post->ID;
+        } else {
+            return $data; // Can't determine post, return original data
+        }
+    }
+    
+    // Only process credit card posts
+    if (get_post_type($post_id) !== 'credit-card') {
         return $data;
     }
     
     // Add our specialized credit card schema alongside RankMath's default schema
-    $credit_card_schema = ccm_generate_product_schema($post->ID);
+    $credit_card_schema = ccm_generate_product_schema($post_id);
     
-    // If RankMath already has a Product schema, merge our additional properties
-    if (isset($data['@type']) && $data['@type'] === 'Product') {
+    // If this is an array of schemas, find and enhance Product schema
+    if (is_array($data)) {
+        foreach ($data as $key => $schema) {
+            if (isset($schema['@type']) && $schema['@type'] === 'Product') {
+                if (isset($credit_card_schema['additionalProperty'])) {
+                    $data[$key]['additionalProperty'] = $credit_card_schema['additionalProperty'];
+                }
+                if (isset($credit_card_schema['aggregateRating'])) {
+                    $data[$key]['aggregateRating'] = $credit_card_schema['aggregateRating'];
+                }
+                break; // Only enhance the first Product schema found
+            }
+        }
+    }
+    // If this is a single schema object
+    elseif (isset($data['@type']) && $data['@type'] === 'Product') {
         if (isset($credit_card_schema['additionalProperty'])) {
             $data['additionalProperty'] = $credit_card_schema['additionalProperty'];
         }
@@ -405,8 +433,10 @@ function ccm_rankmath_schema_credit_card($data, $post) {
 /**
  * Provide credit card specific title suggestions to RankMath
  */
-function ccm_rankmath_title_credit_card($title, $post) {
-    if (get_post_type($post) !== 'credit-card') {
+function ccm_rankmath_title_credit_card($title) {
+    global $post;
+    
+    if (!$post || get_post_type($post) !== 'credit-card') {
         return $title;
     }
     
@@ -421,8 +451,10 @@ function ccm_rankmath_title_credit_card($title, $post) {
 /**
  * Provide credit card specific description suggestions to RankMath
  */
-function ccm_rankmath_description_credit_card($description, $post) {
-    if (get_post_type($post) !== 'credit-card') {
+function ccm_rankmath_description_credit_card($description) {
+    global $post;
+    
+    if (!$post || get_post_type($post) !== 'credit-card') {
         return $description;
     }
     
@@ -442,16 +474,82 @@ function ccm_init_rankmath_integration() {
         return;
     }
     
-    // Hook into RankMath's schema filters
-    add_filter('rank_math/json_ld', 'ccm_rankmath_schema_credit_card', 10, 2);
+    // Use RankMath's specific schema hooks for better compatibility
+    add_action('rank_math/head', 'ccm_add_credit_card_schema_to_head');
     
-    // Hook into RankMath's title and description filters
-    add_filter('rank_math/frontend/title', 'ccm_rankmath_title_credit_card', 10, 2);
-    add_filter('rank_math/frontend/description', 'ccm_rankmath_description_credit_card', 10, 2);
+    // Alternative: Try the json_ld filter with better error handling
+    add_filter('rank_math/json_ld', function($data, $jsonld = null) {
+        try {
+            return ccm_rankmath_schema_credit_card($data, $jsonld);
+        } catch (Exception $e) {
+            error_log('CCM RankMath Schema Error: ' . $e->getMessage());
+            return $data;
+        }
+    }, 10, 2);
+    
+    // Hook into RankMath's title filter (disabled for now to prevent conflicts)
+    /*
+    add_filter('rank_math/frontend/title', function($title) {
+        try {
+            return ccm_rankmath_title_credit_card($title);
+        } catch (Exception $e) {
+            error_log('CCM RankMath Title Error: ' . $e->getMessage());
+            return $title;
+        }
+    }, 10, 1);
+    
+    // Hook into RankMath's description filter (disabled for now to prevent conflicts)
+    add_filter('rank_math/frontend/description', function($description) {
+        try {
+            return ccm_rankmath_description_credit_card($description);
+        } catch (Exception $e) {
+            error_log('CCM RankMath Description Error: ' . $e->getMessage());
+            return $description;
+        }
+    }, 10, 1);
+    */
 }
 
-// Initialize RankMath integration on init
-add_action('init', 'ccm_init_rankmath_integration');
+/**
+ * Add credit card schema directly to head when RankMath is active
+ */
+function ccm_add_credit_card_schema_to_head() {
+    $post_id = get_the_ID();
+    
+    if (!$post_id || get_post_type($post_id) !== 'credit-card') {
+        return;
+    }
+    
+    // Output our specialized credit card schemas
+    $financial_schema = [
+        '@context' => 'https://schema.org',
+        '@type' => 'FinancialProduct',
+        'name' => get_the_title($post_id),
+        'description' => ccm_generate_meta_description($post_id),
+        'provider' => [
+            '@type' => 'FinancialService',
+            'name' => ''
+        ],
+        'feesAndCommissionsSpecification' => 'Annual Fee: ₹' . number_format(ccm_get_meta($post_id, 'annual_fee', 0, true)) . ', Joining Fee: ₹' . number_format(ccm_get_meta($post_id, 'joining_fee', 0, true)),
+        'interestRate' => ccm_get_meta($post_id, 'interest_rate', 'Varies'),
+        'amount' => [
+            '@type' => 'MonetaryAmount',
+            'currency' => 'INR',
+            'value' => ccm_get_meta($post_id, 'annual_fee', 0, true)
+        ]
+    ];
+    
+    // Get bank name
+    $bank_terms = get_the_terms($post_id, 'store');
+    if (!is_wp_error($bank_terms) && !empty($bank_terms)) {
+        $financial_schema['provider']['name'] = $bank_terms[0]->name;
+    }
+    
+    ccm_output_schema($financial_schema);
+}
+
+// Initialize RankMath integration on plugins_loaded to ensure RankMath is available
+add_action('plugins_loaded', 'ccm_init_rankmath_integration', 20);
 
 /**
  * Add RankMath specific meta box data for credit cards

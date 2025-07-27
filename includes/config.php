@@ -50,7 +50,6 @@ $ccm_meta_fields = [
     'joining_fee' => CCM_META_PREFIX . 'joining_fee',
     'rating' => CCM_META_PREFIX . 'rating',
     'review_count' => CCM_META_PREFIX . 'review_count',
-    'card_image_url' => CCM_META_PREFIX . 'card_image_url',
     'apply_link' => CCM_META_PREFIX . 'apply_link',
     
     // Financial Details

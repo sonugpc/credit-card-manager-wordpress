@@ -20,7 +20,7 @@ $show_compare = isset($show_compare) ? $show_compare : true;
 $show_badges = isset($show_badges) ? $show_badges : true;
 
 // Get card data using centralized functions
-$card_image = ccm_get_meta($post_id, 'card_image_url', '');
+$card_image = has_post_thumbnail($post_id) ? get_the_post_thumbnail_url($post_id, 'medium') : '';
 $rating = ccm_get_meta($post_id, 'rating', 0, true);
 $review_count = ccm_get_meta($post_id, 'review_count', 0, true);
 $annual_fee = ccm_format_currency(ccm_get_meta($post_id, 'annual_fee', 'N/A'));

@@ -1,50 +1,36 @@
 <?php
 /**
- * The template for displaying a single "Credit Card" post type.
- * SEO-optimized with rich snippets and meta tags
- *
+ * Professional Single Credit Card Template - Version 3.0
+ * Inspired by PaisaBazaar and CardInsider designs
+ * Blog-style layout with comprehensive information
+ * 
  * @package Credit Card Manager
  */
 
 get_header();
 
-// --- Data Fetching & Preparation ---
+// Data preparation
 $post_id = get_the_ID();
-$meta = get_post_meta($post_id);
 $card_name = get_the_title();
 
-// Helper function for rupee formatting (local override)
-function format_rupees($amount) {
-    if (!is_numeric($amount)) {
-        return $amount;
-    }
-    return '₹' . number_format($amount);
-}
-
-// --- Assign all variables ---
+// Basic info
 $rating = ccm_get_meta($post_id, 'rating', 0, true);
 $review_count = ccm_get_meta($post_id, 'review_count', 0, true);
 $annual_fee = ccm_get_meta($post_id, 'annual_fee', 0, true);
 $joining_fee = ccm_get_meta($post_id, 'joining_fee', 0, true);
 $welcome_bonus = ccm_get_meta($post_id, 'welcome_bonus', 'N/A');
+$cashback_rate = ccm_get_meta($post_id, 'cashback_rate', 'N/A');
+$reward_type = ccm_get_meta($post_id, 'reward_type', '');
+$reward_conversion_rate = ccm_get_meta($post_id, 'reward_conversion_rate', '');
+$reward_conversion_value = ccm_get_meta($post_id, 'reward_conversion_value', 0, true);
 $credit_limit = ccm_get_meta($post_id, 'credit_limit', 'N/A');
 $processing_time = ccm_get_meta($post_id, 'processing_time', 'N/A');
 $min_income = ccm_get_meta($post_id, 'min_income', 'N/A');
 $apply_link = esc_url(ccm_get_meta($post_id, 'apply_link', '#'));
+$featured = (bool) ccm_get_meta($post_id, 'featured', false);
 $trending = (bool) ccm_get_meta($post_id, 'trending', false);
 
-// Design & Color
-$gradient_class = ccm_get_meta($post_id, 'gradient', 'from-gray-700 to-gray-900'); // Default gradient
-$theme_color = ccm_get_meta($post_id, 'theme_color', '#1e40af');
-
-// Scores
-$overall_score = ccm_get_meta($post_id, 'overall_score', 0, true);
-$reward_score = ccm_get_meta($post_id, 'reward_score', 0, true);
-$fees_score = ccm_get_meta($post_id, 'fees_score', 0, true);
-$benefits_score = ccm_get_meta($post_id, 'benefits_score', 0, true);
-$support_score = ccm_get_meta($post_id, 'support_score', 0, true);
-
-// Array data
+// Advanced data
 $pros = ccm_get_meta($post_id, 'pros', [], false, true);
 $cons = ccm_get_meta($post_id, 'cons', [], false, true);
 $best_for = ccm_get_meta($post_id, 'best_for', [], false, true);
@@ -54,504 +40,1300 @@ $fees = ccm_get_meta($post_id, 'fees', [], false, true);
 $eligibility = ccm_get_meta($post_id, 'eligibility', [], false, true);
 $documents = ccm_get_meta($post_id, 'documents', [], false, true);
 
-// Get Network Type taxonomy
-$network_terms = get_the_terms($post_id, 'network-type');
-if (!is_wp_error($network_terms) && !empty($network_terms)) {
-    $network_names = wp_list_pluck($network_terms, 'name');
-    $network_type = implode(', ', $network_names);
-} else {
-    $network_type = 'N/A';
-}
-
-// Get Bank/Store taxonomy
+// Get taxonomy terms
 $bank_terms = get_the_terms($post_id, 'store');
 $bank_name = (!is_wp_error($bank_terms) && !empty($bank_terms)) ? $bank_terms[0]->name : '';
 
-// SEO Meta Data
-$page_title = get_the_title() . ' Credit Card Review & Apply Online';
+$network_terms = get_the_terms($post_id, 'network-type');
+$network_type = (!is_wp_error($network_terms) && !empty($network_terms)) ? $network_terms[0]->name : 'N/A';
+
+$category_terms = get_the_terms($post_id, 'card-category');
+$category_name = (!is_wp_error($category_terms) && !empty($category_terms)) ? $category_terms[0]->name : '';
+
+// Card image - use featured image
+$card_image = has_post_thumbnail() ? get_the_post_thumbnail_url($post_id, 'large') : '';
+
+// SEO data
+$page_title = $card_name . ' Credit Card Review 2025 - Fees, Benefits & Apply Online';
 $meta_description = sprintf(
-    'Complete review of %s credit card with %s rating. Compare fees (₹%s annual), rewards, benefits and apply online. Get expert insights and user reviews.',
-    get_the_title(),
+    '%s credit card review with %s/5 rating. ₹%s annual fee, %s rewards. Compare benefits, eligibility & apply online instantly.',
+    $card_name,
     $rating,
-    number_format($annual_fee)
+    number_format($annual_fee),
+    $cashback_rate
 );
-$canonical_url = get_permalink($post_id);
-$featured_image = has_post_thumbnail() ? get_the_post_thumbnail_url($post_id, 'large') : '';
 
-// Breadcrumb structured data
-$breadcrumbs = [
-    ['name' => 'Home', 'url' => home_url()],
-    ['name' => 'Credit Cards', 'url' => get_post_type_archive_link('credit-card')],
-    ['name' => get_the_title(), 'url' => $canonical_url]
-];
-
+// Use existing format_currency function from helper-functions.php
 ?>
 
 <?php
-// Only output meta tags if no SEO plugin is detected
+// SEO Meta Tags (only if no SEO plugin detected)
 if (!function_exists('ccm_has_seo_plugin') || !ccm_has_seo_plugin()) {
-    // Output basic meta tags only if no SEO plugin
-    ccm_add_meta_tags(
-        $page_title, 
-        $meta_description, 
-        $canonical_url, 
-        get_the_title() . ', credit card, ' . $bank_name . ', ' . $network_type . ', rewards, cashback, apply online'
-    );
-    
-    // Output social media tags only if no SEO plugin
-    ccm_add_og_tags($page_title, $meta_description, $canonical_url, $featured_image, 'article');
-    ccm_add_twitter_tags($page_title, $meta_description, $canonical_url, $featured_image);
-    
-    // Article specific meta (only if no SEO plugin)
-    echo '<meta property="article:published_time" content="' . get_the_date('c') . '">' . "\n";
-    echo '<meta property="article:modified_time" content="' . get_the_modified_date('c') . '">' . "\n";
-    echo '<meta property="article:section" content="Credit Cards">' . "\n";
-    echo '<meta property="article:tag" content="' . esc_attr(get_the_title() . ', ' . $bank_name . ', Credit Card') . '">' . "\n";
-} else {
-    echo '<!-- Meta tags handled by ' . (class_exists('RankMath') ? 'RankMath' : 'SEO Plugin') . ' -->' . "\n";
+    ccm_add_meta_tags($page_title, $meta_description, get_permalink(), $card_name . ', credit card, ' . $bank_name . ', review, apply online');
+    ccm_add_og_tags($page_title, $meta_description, get_permalink(), $card_image, 'article');
+    ccm_add_twitter_tags($page_title, $meta_description, get_permalink(), $card_image);
 }
 ?>
 
-<!-- JSON-LD Structured Data -->
+<!-- Enhanced Schema Markup -->
 <script type="application/ld+json">
 {
     "@context": "https://schema.org",
-    "@type": "Product",
-    "name": "<?php echo esc_attr(get_the_title()); ?>",
-    "description": "<?php echo esc_attr(wp_strip_all_tags(get_the_excerpt())); ?>",
-    "brand": {
-        "@type": "Brand",
-        "name": "<?php echo esc_attr($bank_name); ?>"
+    "@type": "Review",
+    "itemReviewed": {
+        "@type": "FinancialProduct",
+        "name": "<?php echo esc_js($card_name); ?>",
+        "brand": "<?php echo esc_js($bank_name); ?>",
+        "category": "Credit Card"
     },
-    <?php if ($featured_image): ?>
-    "image": "<?php echo esc_url($featured_image); ?>",
-    <?php endif; ?>
-    "category": "Credit Card",
-    "aggregateRating": {
-        "@type": "AggregateRating",
-        "ratingValue": "<?php echo esc_attr($rating); ?>",
-        "reviewCount": "<?php echo esc_attr($review_count); ?>",
-        "bestRating": "5",
-        "worstRating": "1"
+    "reviewRating": {
+        "@type": "Rating",
+        "ratingValue": "<?php echo esc_js($rating); ?>",
+        "bestRating": "5"
     },
-    "offers": {
-        "@type": "Offer",
-        "url": "<?php echo esc_url($apply_link); ?>",
-        "priceCurrency": "INR",
-        "price": "<?php echo esc_attr($annual_fee); ?>",
-        "priceValidUntil": "<?php echo date('Y-12-31'); ?>",
-        "availability": "https://schema.org/InStock",
-        "seller": {
-            "@type": "Organization",
-            "name": "<?php echo esc_attr($bank_name); ?>"
-        }
+    "author": {
+        "@type": "Organization",
+        "name": "<?php bloginfo('name'); ?>"
     },
-    "additionalProperty": [
-        {
-            "@type": "PropertyValue",
-            "name": "Annual Fee",
-            "value": "₹<?php echo esc_attr(number_format($annual_fee)); ?>"
-        },
-        {
-            "@type": "PropertyValue",
-            "name": "Network Type",
-            "value": "<?php echo esc_attr($network_type); ?>"
-        },
-        {
-            "@type": "PropertyValue",
-            "name": "Welcome Bonus",
-            "value": "<?php echo esc_attr($welcome_bonus); ?>"
-        }
-    ]
-}
-</script>
-
-<!-- BreadcrumbList Schema -->
-<script type="application/ld+json">
-{
-    "@context": "https://schema.org",
-    "@type": "BreadcrumbList",
-    "itemListElement": [
-        <?php foreach ($breadcrumbs as $index => $breadcrumb): ?>
-        {
-            "@type": "ListItem",
-            "position": <?php echo $index + 1; ?>,
-            "name": "<?php echo esc_attr($breadcrumb['name']); ?>",
-            "item": "<?php echo esc_url($breadcrumb['url']); ?>"
-        }<?php echo ($index < count($breadcrumbs) - 1) ? ',' : ''; ?>
-        <?php endforeach; ?>
-    ]
-}
-</script>
-
-<!-- FinancialProduct Schema -->
-<script type="application/ld+json">
-{
-    "@context": "https://schema.org",
-    "@type": "FinancialProduct",
-    "name": "<?php echo esc_attr(get_the_title()); ?>",
-    "description": "<?php echo esc_attr($meta_description); ?>",
-    "provider": {
-        "@type": "FinancialService",
-        "name": "<?php echo esc_attr($bank_name); ?>"
-    },
-    "feesAndCommissionsSpecification": "Annual Fee: ₹<?php echo esc_attr(number_format($annual_fee)); ?>, Joining Fee: ₹<?php echo esc_attr(number_format($joining_fee)); ?>",
-    "interestRate": "<?php echo esc_attr(ccm_get_meta($post_id, 'interest_rate', 'Varies')); ?>",
-    "amount": {
-        "@type": "MonetaryAmount",
-        "currency": "INR",
-        "value": "<?php echo esc_attr($annual_fee); ?>"
-    }
+    "reviewBody": "<?php echo esc_js($meta_description); ?>",
+    "datePublished": "<?php echo get_the_date('c'); ?>",
+    "dateModified": "<?php echo get_the_modified_date('c'); ?>"
 }
 </script>
 
 <style>
-    /* Tailwind-inspired CSS for the template */
-    :root {
-        --cc-theme-color: <?php echo esc_attr($theme_color); ?>;
-        --cc-gray-50: #f9fafb; --cc-gray-100: #f3f4f6; --cc-gray-200: #e5e7eb; --cc-gray-600: #4b5563; --cc-gray-700: #374151; --cc-gray-800: #1f2937;
-        --cc-blue-50: #eff6ff; --cc-blue-200: #bfdbfe; --cc-blue-500: #3b82f6; --cc-blue-600: #2563eb; --cc-blue-700: #1d4ed8;
-        --cc-green-500: #22c55e; --cc-red-500: #ef4444; --cc-red-600: #dc2626; --cc-red-700: #b91c1c;
-        --cc-purple-600: #9333ea;
-        --cc-yellow-400: #facc15;
+/* Professional Credit Card Single Page Styles */
+:root {
+    --primary-blue: #2563eb;
+    --primary-green: #059669;
+    --primary-red: #dc2626;
+    --primary-orange: #ea580c;
+    --gray-50: #f9fafb;
+    --gray-100: #f3f4f6;
+    --gray-200: #e5e7eb;
+    --gray-300: #d1d5db;
+    --gray-400: #9ca3af;
+    --gray-500: #6b7280;
+    --gray-600: #4b5563;
+    --gray-700: #374151;
+    --gray-800: #1f2937;
+    --gray-900: #111827;
+    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+    --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1);
+    --radius-sm: 6px;
+    --radius-md: 8px;
+    --radius-lg: 12px;
+    --radius-xl: 16px;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    line-height: 1.6;
+    color: var(--gray-800);
+    background-color: var(--gray-50);
+    margin: 0;
+    padding: 0;
+}
+
+.cc-single-wrapper {
+    width: 100%;
+    background: white;
+    min-height: 100vh;
+}
+
+/* Hero Section */
+.cc-hero {
+    background: linear-gradient(135deg, var(--primary-blue) 0%, #1e40af 100%);
+    color: white;
+    padding: 2rem 1.5rem;
+    position: relative;
+    overflow: hidden;
+}
+
+.cc-hero::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grain" width="100" height="100" patternUnits="userSpaceOnUse"><circle cx="50" cy="50" r="1" fill="white" opacity="0.1"/></pattern></defs><rect width="100" height="100" fill="url(%23grain)"/></svg>');
+    opacity: 0.1;
+}
+
+.cc-hero-content {
+    position: relative;
+    z-index: 2;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.cc-hero-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.cc-card-image {
+    width: 140px;
+    height: auto;
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-xl);
+    flex-shrink: 0;
+}
+
+.cc-hero-title {
+    flex: 1;
+}
+
+.cc-hero-title h1 {
+    font-size: 2rem;
+    font-weight: 800;
+    margin: 0 0 0.5rem 0;
+    line-height: 1.2;
+}
+
+.cc-bank-name {
+    font-size: 1.1rem;
+    opacity: 0.9;
+    margin: 0 0 1rem 0;
+    font-weight: 500;
+}
+
+.cc-hero-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+}
+
+.cc-badge {
+    padding: 0.5rem 1rem;
+    border-radius: 50px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.cc-badge.featured {
+    background: var(--primary-orange);
+}
+
+.cc-badge.trending {
+    background: var(--primary-red);
+}
+
+.cc-badge.rating {
+    background: rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(10px);
+}
+
+.cc-key-highlights {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 1rem;
+}
+
+.cc-highlight-card {
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: var(--radius-lg);
+    padding: 1rem;
+    text-align: center;
+}
+
+.cc-highlight-label {
+    font-size: 0.875rem;
+    opacity: 0.8;
+    margin-bottom: 0.5rem;
+}
+
+.cc-highlight-value {
+    font-size: 1.25rem;
+    font-weight: 700;
+}
+
+/* Sticky Navigation */
+.cc-nav-sticky {
+    position: sticky;
+    top: 0;
+    background: white;
+    border-bottom: 1px solid var(--gray-200);
+    z-index: 100;
+    box-shadow: var(--shadow-sm);
+}
+
+.cc-nav-container {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem 1.5rem;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.cc-nav-links {
+    display: flex;
+    gap: 2rem;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+.cc-nav-links::-webkit-scrollbar {
+    display: none;
+}
+
+.cc-nav-link {
+    font-weight: 500;
+    color: var(--gray-600);
+    text-decoration: none;
+    padding: 0.5rem 0;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s;
+    white-space: nowrap;
+}
+
+.cc-nav-link:hover,
+.cc-nav-link.active {
+    color: var(--primary-blue);
+    border-bottom-color: var(--primary-blue);
+}
+
+.cc-apply-btn {
+    background: var(--primary-blue);
+    color: white;
+    padding: 0.75rem 1.5rem;
+    border-radius: var(--radius-md);
+    text-decoration: none;
+    font-weight: 600;
+    transition: all 0.2s;
+    border: none;
+    cursor: pointer;
+}
+
+.cc-apply-btn:hover {
+    background: #1d4ed8;
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-lg);
+}
+
+/* Content Sections */
+.cc-content {
+    padding: 2rem 1.5rem;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.cc-section {
+    margin-bottom: 3rem;
+}
+
+.cc-section-title {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--gray-900);
+    margin: 0 0 1.5rem 0;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.cc-section-title::before {
+    content: '';
+    width: 4px;
+    height: 2rem;
+    background: var(--primary-blue);
+    border-radius: 2px;
+}
+
+/* Quick Overview Grid */
+.cc-overview-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.cc-overview-card {
+    background: var(--gray-50);
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius-lg);
+    padding: 1.5rem;
+    text-align: center;
+}
+
+.cc-overview-icon {
+    width: 3rem;
+    height: 3rem;
+    background: var(--primary-blue);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 1rem;
+    color: white;
+    font-size: 1.5rem;
+}
+
+.cc-overview-label {
+    font-size: 0.875rem;
+    color: var(--gray-600);
+    margin-bottom: 0.5rem;
+}
+
+.cc-overview-value {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--gray-900);
+}
+
+/* Pros and Cons */
+.cc-pros-cons {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 3rem;
+    margin-bottom: 2rem;
+}
+
+@media (max-width: 768px) {
+    .cc-pros-cons {
+        grid-template-columns: 1fr;
     }
-    .theme-background {
-        background: var(--cc-theme-color);
+}
+
+.cc-pros,
+.cc-cons {
+    background: white;
+    border-radius: var(--radius-lg);
+    padding: 1.5rem;
+    box-shadow: var(--shadow-md);
+}
+
+.cc-pros {
+    border-left: 4px solid var(--primary-green);
+}
+
+.cc-cons {
+    border-left: 4px solid var(--primary-red);
+}
+
+.cc-pros h3 {
+    color: var(--primary-green);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0 0 1rem 0;
+    font-size: 1.25rem;
+}
+
+.cc-cons h3 {
+    color: var(--primary-red);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0 0 1rem 0;
+    font-size: 1.25rem;
+}
+
+.cc-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.cc-list li {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
+    padding: 0.5rem 0;
+}
+
+.cc-list li:last-child {
+    margin-bottom: 0;
+}
+
+.cc-list .icon {
+    width: 1.25rem;
+    height: 1.25rem;
+    flex-shrink: 0;
+    margin-top: 0.125rem;
+}
+
+.cc-pros .icon {
+    color: var(--primary-green);
+}
+
+.cc-cons .icon {
+    color: var(--primary-red);
+}
+
+/* Best For Tags */
+.cc-best-for {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-bottom: 2rem;
+}
+
+.cc-tag {
+    background: var(--primary-blue);
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: 50px;
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+/* Features List */
+.cc-features-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.cc-feature-item {
+    display: flex;
+    gap: 1rem;
+    padding: 1.5rem;
+    border-bottom: 1px solid var(--gray-200);
+    transition: background-color 0.2s;
+}
+
+.cc-feature-item:hover {
+    background-color: var(--gray-50);
+}
+
+.cc-feature-item:last-child {
+    border-bottom: none;
+}
+
+.cc-feature-icon {
+    width: 3rem;
+    height: 3rem;
+    background: var(--gray-100);
+    border-radius: var(--radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--primary-blue);
+    font-size: 1.5rem;
+    flex-shrink: 0;
+}
+
+.cc-feature-content h4 {
+    font-size: 1.125rem;
+    font-weight: 600;
+    margin: 0 0 0.5rem 0;
+    color: var(--gray-900);
+}
+
+.cc-feature-content p {
+    color: var(--gray-600);
+    margin: 0;
+    line-height: 1.5;
+}
+
+/* Data Tables */
+.cc-data-table {
+    background: white;
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    box-shadow: var(--shadow-md);
+}
+
+.cc-table-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid var(--gray-200);
+}
+
+.cc-table-row:last-child {
+    border-bottom: none;
+}
+
+.cc-table-row:nth-child(even) {
+    background-color: var(--gray-50);
+}
+
+.cc-table-label {
+    font-weight: 500;
+    color: var(--gray-700);
+}
+
+.cc-table-value {
+    font-weight: 600;
+    color: var(--gray-900);
+}
+
+.cc-table-value.positive {
+    color: var(--primary-green);
+}
+
+.cc-table-value.negative {
+    color: var(--primary-red);
+}
+
+/* FAQ Section */
+.cc-faq-item {
+    background: white;
+    border-radius: var(--radius-lg);
+    margin-bottom: 1rem;
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+}
+
+.cc-faq-question {
+    padding: 1.5rem;
+    font-weight: 600;
+    color: var(--gray-900);
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: background-color 0.2s;
+}
+
+.cc-faq-question:hover {
+    background-color: var(--gray-50);
+}
+
+.cc-faq-answer {
+    padding: 0 1.5rem 1.5rem;
+    color: var(--gray-700);
+    line-height: 1.6;
+    display: none;
+}
+
+.cc-faq-item.active .cc-faq-answer {
+    display: block;
+}
+
+/* Bottom CTA */
+.cc-bottom-cta {
+    background: linear-gradient(135deg, var(--primary-blue) 0%, #1e40af 100%);
+    color: white;
+    padding: 3rem 2rem;
+    border-radius: var(--radius-xl);
+    text-align: center;
+    margin: 3rem 0;
+}
+
+.cc-bottom-cta h3 {
+    font-size: 2rem;
+    font-weight: 700;
+    margin: 0 0 1rem 0;
+}
+
+.cc-bottom-cta p {
+    font-size: 1.125rem;
+    opacity: 0.9;
+    margin: 0 0 2rem 0;
+}
+
+.cc-cta-button {
+    background: white;
+    color: var(--primary-blue);
+    padding: 1rem 2rem;
+    border-radius: var(--radius-md);
+    text-decoration: none;
+    font-weight: 700;
+    font-size: 1.125rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: all 0.2s;
+    box-shadow: var(--shadow-lg);
+}
+
+.cc-cta-button:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-xl);
+}
+
+/* Content Body Styling */
+.cc-content-body {
+    line-height: 1.7;
+    color: var(--gray-700);
+}
+
+.cc-content-body p {
+    margin-bottom: 1.5rem;
+}
+
+.cc-content-body h1,
+.cc-content-body h2,
+.cc-content-body h3,
+.cc-content-body h4,
+.cc-content-body h5,
+.cc-content-body h6 {
+    color: var(--gray-900);
+    font-weight: 600;
+    margin: 2rem 0 1rem 0;
+    line-height: 1.3;
+}
+
+.cc-content-body h2 {
+    font-size: 1.5rem;
+    border-bottom: 2px solid var(--gray-200);
+    padding-bottom: 0.5rem;
+}
+
+.cc-content-body h3 {
+    font-size: 1.25rem;
+}
+
+.cc-content-body ul,
+.cc-content-body ol {
+    margin: 1rem 0;
+    padding-left: 2rem;
+}
+
+.cc-content-body li {
+    margin-bottom: 0.5rem;
+}
+
+.cc-content-body blockquote {
+    border-left: 4px solid var(--primary-blue);
+    background: var(--gray-50);
+    padding: 1rem 1.5rem;
+    margin: 1.5rem 0;
+    font-style: italic;
+}
+
+.cc-content-body img {
+    max-width: 100%;
+    height: auto;
+    border-radius: var(--radius-md);
+    margin: 1rem 0;
+}
+
+.cc-content-body table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1.5rem 0;
+    background: white;
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    box-shadow: var(--shadow-sm);
+}
+
+.cc-content-body th,
+.cc-content-body td {
+    padding: 0.75rem 1rem;
+    text-align: left;
+    border-bottom: 1px solid var(--gray-200);
+}
+
+.cc-content-body th {
+    background: var(--gray-50);
+    font-weight: 600;
+    color: var(--gray-900);
+}
+
+.cc-content-body strong {
+    color: var(--gray-900);
+    font-weight: 600;
+}
+
+.cc-content-body code {
+    background: var(--gray-100);
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+    font-size: 0.875rem;
+}
+
+.cc-content-body pre {
+    background: var(--gray-900);
+    color: white;
+    padding: 1rem;
+    border-radius: var(--radius-md);
+    overflow-x: auto;
+    margin: 1rem 0;
+}
+
+.cc-content-body pre code {
+    background: transparent;
+    padding: 0;
+}
+
+.page-links {
+    margin-top: 2rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--gray-200);
+    text-align: center;
+}
+
+.page-links a {
+    display: inline-block;
+    padding: 0.5rem 1rem;
+    margin: 0 0.25rem;
+    background: var(--primary-blue);
+    color: white;
+    text-decoration: none;
+    border-radius: var(--radius-md);
+    transition: background-color 0.2s;
+}
+
+.page-links a:hover {
+    background: #1d4ed8;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .cc-hero {
+        padding: 1.5rem 1rem;
     }
-    .cc-body { background-color: var(--cc-gray-50); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
-    .cc-hero { color: white; position: relative; overflow: hidden; }
-    .cc-hero.gradient-1 { background-image: linear-gradient(to bottom right, #1e40af, #7c3aed); }
-    .cc-hero.gradient-2 { background-image: linear-gradient(to bottom right, #be185d, #f472b6); }
-    .cc-hero.gradient-3 { background-image: linear-gradient(to bottom right, #047857, #34d399); }
-    .cc-hero.gradient-default { background-image: linear-gradient(to bottom right, #4b5563, #1f2937); }
-    .cc-hero-content { position: relative; z-index: 10; padding: 2rem 1.5rem; }
-    .cc-hero-header { display: flex; align-items: center; gap: 1rem; margin-bottom: 1.5rem; }
-    .cc-hero-img-wrap { width: 100px; height: 63px; }
-    .cc-hero-img-wrap img { width: 100%; height: 100%; object-fit: cover; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-    .cc-hero-title h1 { font-size: 1.25rem; font-weight: 700; margin: 0 0 4px; }
-    .cc-hero-title p { opacity: 0.9; font-size: 0.875rem; margin: 0; }
-    .cc-rating-trending { display: flex; align-items: center; gap: 0.75rem; margin-top: 0.5rem; }
-    .cc-rating { display: flex; align-items: center; gap: 0.25rem; }
-    .cc-rating .icon { width: 1rem; height: 1rem; color: var(--cc-yellow-400); }
-    .cc-rating span { font-size: 0.875rem; font-weight: 500; }
-    .cc-trending-badge { background-color: var(--cc-red-500); font-size: 0.75rem; padding: 4px 8px; border-radius: 99px; font-weight: 500; display: flex; align-items: center; gap: 4px; }
-    .cc-trending-badge .icon { width: 0.75rem; height: 0.75rem; }
-    .cc-hero-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem; }
-    .cc-stat-box { background-color: rgba(255,255,255,0.1); backdrop-filter: blur(4px); border-radius: 12px; padding: 1rem; border: 1px solid rgba(255,255,255,0.2); }
-    .cc-stat-box .label { display: flex; align-items: center; gap: 0.5rem; font-size: 0.875rem; opacity: 0.8; margin-bottom: 0.5rem; }
-    .cc-stat-box .label .icon { width: 1rem; height: 1rem; }
-    .cc-stat-box .value { font-size: 1.125rem; font-weight: 700; }
-    .cc-score-breakdown { background-color: rgba(255,255,255,0.1); backdrop-filter: blur(4px); border-radius: 12px; padding: 1rem; border: 1px solid rgba(255,255,255,0.2); }
-    .cc-score-breakdown .overall { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem; }
-    .cc-score-breakdown .overall .label { font-size: 0.875rem; opacity: 0.8; }
-    .cc-score-breakdown .overall .value { font-size: 1.5rem; font-weight: 700; }
-    .cc-score-breakdown .details { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; font-size: 0.875rem; }
-    .cc-score-breakdown .details > div { display: flex; justify-content: space-between; }
-    .cc-score-breakdown .details .label { opacity: 0.7; }
-    .cc-score-breakdown .details .value { font-weight: 500; }
-    .cc-actions-bar { padding: 1rem 1.5rem; margin-top: -1rem; position: relative; z-index: 10; }
-    .cc-actions-bar-inner { background: white; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); border: 1px solid var(--cc-gray-100); padding: 1rem; display: flex; gap: 0.75rem; }
-    .cc-btn { flex: 1; padding: 0.75rem; border-radius: 12px; font-weight: 500; display: flex; align-items: center; justify-content: center; gap: 0.5rem; border: none; cursor: pointer; transition: all 0.2s; }
-    .cc-btn .icon { width: 1.25rem; height: 1.25rem; }
-    .cc-btn-primary { background-image: linear-gradient(to right, var(--cc-blue-600), var(--cc-purple-600)); color: white; }
-    .cc-btn-primary:hover { box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
-    .cc-btn-secondary { background-color: var(--cc-gray-100); color: var(--cc-gray-700); }
-    .cc-btn-secondary:hover { background-color: var(--cc-gray-200); }
-    .cc-tabs-nav { padding: 1rem 1.5rem; }
-    .cc-tabs-nav-inner { background: white; border-radius: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); border: 1px solid var(--cc-gray-100); display: flex; overflow-x: auto; }
-    .cc-tab-link { flex: 1; min-width: 0; padding: 0.75rem 1rem; font-size: 0.875rem; font-weight: 500; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 0.25rem; border: none; background: transparent; cursor: pointer; color: var(--cc-gray-600); border-bottom: 2px solid transparent; }
-    .cc-tab-link .icon { width: 1rem; height: 1rem; }
-    .cc-tab-link:hover { background-color: var(--cc-gray-50); }
-    .cc-tab-link.active { color: var(--cc-blue-600); border-color: var(--cc-blue-600); background-color: var(--cc-blue-50); }
-    .cc-content-wrap { padding: 0 1.5rem 1.5rem; }
-    .cc-tab-content { display: none; animation: fadeIn 0.5s; }
-    .cc-tab-content.active { display: block; }
-    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-    .cc-section { background: white; border-radius: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); border: 1px solid var(--cc-gray-100); padding: 1.5rem; margin-bottom: 1.5rem; }
-    .cc-section-title { font-size: 1.125rem; font-weight: 700; color: var(--cc-gray-800); margin: 0 0 1rem; display: flex; align-items: center; gap: 0.5rem; }
-    .cc-section-title .icon { width: 1.25rem; height: 1.25rem; }
-    .cc-overview-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; }
-    .cc-overview-item { text-align: center; padding: 1rem; background-color: var(--cc-gray-50); border-radius: 12px; }
-    .cc-overview-item .icon { width: 2rem; height: 2rem; margin: 0 auto 0.5rem; color: var(--cc-blue-500); }
-    .cc-overview-item .label { font-size: 0.875rem; color: var(--cc-gray-600); }
-    .cc-overview-item .value { font-weight: 500; color: var(--cc-gray-800); }
-    .cc-pros-cons-grid { display: grid; grid-template-columns: 1fr; gap: 1.5rem; }
-    @media (min-width: 768px) { .cc-pros-cons-grid { grid-template-columns: 1fr 1fr; } }
-    .cc-list ul { list-style: none; padding: 0; margin: 0; }
-    .cc-list li { display: flex; align-items: flex-start; gap: 0.5rem; margin-bottom: 0.75rem; }
-    .cc-list .icon { width: 1rem; height: 1rem; flex-shrink: 0; margin-top: 2px; }
-    .cc-list .icon.pro { color: var(--cc-green-500); }
-    .cc-list .icon.con { color: var(--cc-red-600); }
-    .cc-list span { font-size: 0.875rem; color: var(--cc-gray-700); }
-    .cc-best-for-tags { display: flex; flex-wrap: wrap; gap: 0.5rem; }
-    .cc-best-for-tags span { background-color: var(--cc-blue-50); color: var(--cc-blue-700); font-size: 0.875rem; padding: 0.5rem 0.75rem; border-radius: 99px; border: 1px solid var(--cc-blue-200); }
-    .cc-feature-item { display: flex; align-items: flex-start; gap: 1rem; padding: 1rem; border-radius: 12px; transition: background-color 0.2s; }
-    .cc-feature-item:not(:last-child) { border-bottom: 1px solid var(--cc-gray-100); }
-    .cc-feature-item:hover { background-color: var(--cc-gray-50); }
-    .cc-feature-item .icon { width: 2rem; height: 2rem; color: var(--cc-blue-500); }
-    .cc-feature-item .title { font-weight: 700; margin-bottom: 0.25rem; color: var(--cc-gray-800); }
-    .cc-feature-item .desc { font-size: 0.875rem; color: var(--cc-gray-600); }
-    .cc-data-table .item { display: flex; justify-content: space-between; padding: 0.75rem 0; border-bottom: 1px solid var(--cc-gray-100); }
-    .cc-data-table .item:last-child { border-bottom: none; }
-    .cc-data-table .label { color: var(--cc-gray-700); }
-    .cc-data-table .value { font-weight: 500; color: var(--cc-gray-800); }
-    .cc-data-table .value.positive { color: var(--cc-green-500); }
-    .cc-data-table .value.negative { color: var(--cc-red-600); }
-    .cc-bottom-cta { background-image: linear-gradient(to right, var(--cc-blue-600), var(--cc-purple-600)); border-radius: 16px; padding: 1.5rem; text-align: center; color: white; }
-    .cc-bottom-cta h3 { font-size: 1.25rem; font-weight: 700; margin: 0 0 0.5rem; }
-    .cc-bottom-cta p { opacity: 0.8; font-size: 0.875rem; margin: 0 0 1rem; }
-    .cc-bottom-cta .cc-btn { background: white; color: var(--cc-blue-600); display: inline-flex; width: auto; padding: 0.75rem 2rem; }
+    
+    .cc-hero-header {
+        flex-direction: column;
+        text-align: center;
+        gap: 1rem;
+    }
+    
+    .cc-hero-title h1 {
+        font-size: 1.5rem;
+    }
+    
+    .cc-nav-container {
+        padding: 0.75rem 1rem;
+    }
+    
+    .cc-content {
+        padding: 1.5rem 1rem;
+    }
+    
+    .cc-section-title {
+        font-size: 1.5rem;
+    }
+    
+    .cc-key-highlights {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .cc-overview-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .cc-pros-cons {
+        gap: 1.5rem;
+    }
+}
 </style>
 
-<div class="cc-body">
-    <!-- Breadcrumb Navigation -->
-    <nav class="cc-breadcrumb" style="background: white; padding: 1rem 1.5rem; border-bottom: 1px solid var(--cc-gray-200);">
-        <ol style="display: flex; align-items: center; gap: 0.5rem; margin: 0; padding: 0; list-style: none; font-size: 0.875rem; color: var(--cc-gray-600);">
-            <?php foreach ($breadcrumbs as $index => $breadcrumb): ?>
-                <li style="display: flex; align-items: center; gap: 0.5rem;">
-                    <?php if ($index > 0): ?>
-                        <span style="color: var(--cc-gray-400);">›</span>
+<div class="cc-single-wrapper">
+    <!-- Hero Section -->
+    <section class="cc-hero">
+        <div class="cc-hero-content">
+            <div class="cc-hero-header">
+                <?php if ($card_image): ?>
+                    <img src="<?php echo esc_url($card_image); ?>" alt="<?php echo esc_attr($card_name); ?>" class="cc-card-image">
+                <?php endif; ?>
+                
+                <div class="cc-hero-title">
+                    <h1><?php echo esc_html($card_name); ?></h1>
+                    <?php if ($bank_name): ?>
+                        <p class="cc-bank-name">by <?php echo esc_html($bank_name); ?></p>
                     <?php endif; ?>
-                    <?php if ($index < count($breadcrumbs) - 1): ?>
-                        <a href="<?php echo esc_url($breadcrumb['url']); ?>" style="color: var(--cc-blue-600); text-decoration: none; hover: text-decoration: underline;">
-                            <?php echo esc_html($breadcrumb['name']); ?>
-                        </a>
-                    <?php else: ?>
-                        <span style="color: var(--cc-gray-800); font-weight: 500;">
-                            <?php echo esc_html($breadcrumb['name']); ?>
-                        </span>
-                    <?php endif; ?>
-                </li>
-            <?php endforeach; ?>
-        </ol>
-    </nav>
-
-    <main id="primary" class="site-main">
-        <article id="post-<?php the_ID(); ?>" <?php post_class(); ?>>
+                    
+                    <div class="cc-hero-badges">
+                        <?php if ($rating > 0): ?>
+                            <div class="cc-badge rating">
+                                ⭐ <?php echo esc_html($rating); ?>/5 (<?php echo esc_html($review_count); ?> reviews)
+                            </div>
+                        <?php endif; ?>
+                        
+                        <?php if ($featured): ?>
+                            <div class="cc-badge featured">
+                                🏆 Featured
+                            </div>
+                        <?php endif; ?>
+                        
+                        <?php if ($trending): ?>
+                            <div class="cc-badge trending">
+                                🔥 Trending
+                            </div>
+                        <?php endif; ?>
+                        
+                        <?php if ($category_name): ?>
+                            <div class="cc-badge">
+                                <?php echo esc_html($category_name); ?>
+                            </div>
+                        <?php endif; ?>
+                    </div>
+                </div>
+            </div>
             
-            <!-- HERO SECTION -->
-            <div class="cc-hero theme-background <?php echo esc_attr($gradient_class); ?>">
-                <div class="cc-hero-content">
-                    <div class="cc-hero-header">
-                        <div class="cc-hero-img-wrap">
-                            <?php if (has_post_thumbnail()) : ?>
-                                <img src="<?php echo get_the_post_thumbnail_url($post_id, 'medium'); ?>" alt="<?php echo esc_attr($card_name); ?>">
-                            <?php endif; ?>
-                        </div>
-                        <div class="cc-hero-title">
-                            <h1><?php echo esc_html(get_bloginfo('name')); // Bank Name or Site Name ?></h1>
-                            <p><?php echo esc_html($card_name); ?></p>
-                            <div class="cc-rating-trending">
-                                <div class="cc-rating">
-                                    <?php echo ccm_get_icon('star', 'icon'); ?>
-                                    <span><?php echo esc_html($rating); ?> (<?php echo esc_html($review_count); ?> reviews)</span>
-                                </div>
-                                <?php if ($trending) : ?>
-                                <div class="cc-trending-badge">
-                                    <?php echo ccm_get_icon('zap', 'icon'); ?>
-                                    <span>TRENDING</span>
-                                </div>
+            <div class="cc-key-highlights">
+                <div class="cc-highlight-card">
+                    <div class="cc-highlight-label">Annual Fee</div>
+                    <div class="cc-highlight-value"><?php echo esc_html(ccm_format_currency($annual_fee)); ?></div>
+                </div>
+                
+                <div class="cc-highlight-card">
+                    <div class="cc-highlight-label">Reward Rate</div>
+                    <div class="cc-highlight-value"><?php echo esc_html($cashback_rate); ?></div>
+                </div>
+                
+                <div class="cc-highlight-card">
+                    <div class="cc-highlight-label">Welcome Bonus</div>
+                    <div class="cc-highlight-value"><?php echo esc_html($welcome_bonus); ?></div>
+                </div>
+                
+                <div class="cc-highlight-card">
+                    <div class="cc-highlight-label">Credit Limit</div>
+                    <div class="cc-highlight-value"><?php echo esc_html($credit_limit); ?></div>
+                </div>
+            </div>
+        </div>
+    </section>
+    
+    <!-- Sticky Navigation -->
+    <nav class="cc-nav-sticky">
+        <div class="cc-nav-container">
+            <div class="cc-nav-links">
+                <a href="#overview" class="cc-nav-link active">Overview</a>
+                <?php if (get_the_content()): ?>
+                <a href="#content" class="cc-nav-link">About</a>
+                <?php endif; ?>
+                <a href="#features" class="cc-nav-link">Features</a>
+                <a href="#rewards" class="cc-nav-link">Rewards</a>
+                <a href="#fees" class="cc-nav-link">Fees</a>
+                <a href="#eligibility" class="cc-nav-link">Eligibility</a>
+                <a href="#faq" class="cc-nav-link">FAQ</a>
+            </div>
+            <a href="<?php echo $apply_link; ?>" target="_blank" rel="noopener" class="cc-apply-btn">
+                Apply Now
+            </a>
+        </div>
+    </nav>
+    
+    <!-- Main Content -->
+    <main class="cc-content">
+        <!-- Overview Section -->
+        <section id="overview" class="cc-section">
+            <h2 class="cc-section-title">Quick Overview</h2>
+            
+            <div class="cc-overview-grid">
+                <div class="cc-overview-card">
+                    <div class="cc-overview-icon">💳</div>
+                    <div class="cc-overview-label">Network</div>
+                    <div class="cc-overview-value"><?php echo esc_html($network_type); ?></div>
+                </div>
+                
+                <div class="cc-overview-card">
+                    <div class="cc-overview-icon">💰</div>
+                    <div class="cc-overview-label">Joining Fee</div>
+                    <div class="cc-overview-value"><?php echo esc_html(ccm_format_currency($joining_fee)); ?></div>
+                </div>
+                
+                <div class="cc-overview-card">
+                    <div class="cc-overview-icon">⏱️</div>
+                    <div class="cc-overview-label">Processing Time</div>
+                    <div class="cc-overview-value"><?php echo esc_html($processing_time); ?></div>
+                </div>
+                
+                <div class="cc-overview-card">
+                    <div class="cc-overview-icon">📈</div>
+                    <div class="cc-overview-label">Min Income</div>
+                    <div class="cc-overview-value"><?php echo esc_html($min_income); ?></div>
+                </div>
+                
+                <?php if (!empty($reward_type)): ?>
+                <div class="cc-overview-card">
+                    <div class="cc-overview-icon">🎁</div>
+                    <div class="cc-overview-label">Reward Type</div>
+                    <div class="cc-overview-value"><?php echo esc_html($reward_type); ?></div>
+                </div>
+                <?php endif; ?>
+                
+                <?php if (!empty($reward_conversion_rate)): ?>
+                <div class="cc-overview-card">
+                    <div class="cc-overview-icon">💱</div>
+                    <div class="cc-overview-label">Conversion Rate</div>
+                    <div class="cc-overview-value"><?php echo esc_html($reward_conversion_rate); ?></div>
+                </div>
+                <?php endif; ?>
+            </div>
+            
+            <!-- Pros and Cons -->
+            <?php if (!empty($pros) || !empty($cons)): ?>
+            <div class="cc-pros-cons">
+                <?php if (!empty($pros)): ?>
+                <div class="cc-pros">
+                    <h3>✅ Pros</h3>
+                    <ul class="cc-list">
+                        <?php foreach ($pros as $pro): ?>
+                            <li>
+                                <span class="icon">✓</span>
+                                <span><?php echo esc_html($pro); ?></span>
+                            </li>
+                        <?php endforeach; ?>
+                    </ul>
+                </div>
+                <?php endif; ?>
+                
+                <?php if (!empty($cons)): ?>
+                <div class="cc-cons">
+                    <h3>❌ Cons</h3>
+                    <ul class="cc-list">
+                        <?php foreach ($cons as $con): ?>
+                            <li>
+                                <span class="icon">✗</span>
+                                <span><?php echo esc_html($con); ?></span>
+                            </li>
+                        <?php endforeach; ?>
+                    </ul>
+                </div>
+                <?php endif; ?>
+            </div>
+            <?php endif; ?>
+            
+            <!-- Best For -->
+            <?php if (!empty($best_for)): ?>
+            <div>
+                <h3>🎯 Best For</h3>
+                <div class="cc-best-for">
+                    <?php foreach ($best_for as $item): ?>
+                        <span class="cc-tag"><?php echo esc_html($item); ?></span>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+            <?php endif; ?>
+        </section>
+        
+        <!-- Content Section -->
+        <?php if (get_the_content()): ?>
+        <section id="content" class="cc-section">
+            <h2 class="cc-section-title">About This Card</h2>
+            <div class="cc-content-body">
+                <?php 
+                the_content();
+                wp_link_pages(array(
+                    'before' => '<div class="page-links">',
+                    'after'  => '</div>',
+                ));
+                ?>
+            </div>
+        </section>
+        <?php endif; ?>
+        
+        <!-- Features Section -->
+        <section id="features" class="cc-section">
+            <h2 class="cc-section-title">Key Features</h2>
+            
+            <?php if (!empty($features)): ?>
+                <ul class="cc-features-list">
+                    <?php foreach ($features as $feature): ?>
+                        <li class="cc-feature-item">
+                            <div class="cc-feature-icon">🎁</div>
+                            <div class="cc-feature-content">
+                                <h4><?php echo esc_html($feature['title'] ?? $feature); ?></h4>
+                                <?php if (isset($feature['description'])): ?>
+                                    <p><?php echo esc_html($feature['description']); ?></p>
+                                <?php endif; ?>
+                            </div>
+                        </li>
+                    <?php endforeach; ?>
+                </ul>
+            <?php else: ?>
+                <p>Detailed features information will be updated soon. Please check with the bank for complete feature list.</p>
+            <?php endif; ?>
+        </section>
+        
+        <!-- Rewards Section -->
+        <section id="rewards" class="cc-section">
+            <h2 class="cc-section-title">Reward Program</h2>
+            
+            <!-- Reward Type and Conversion Info -->
+            <?php if (!empty($reward_type) || !empty($reward_conversion_rate)): ?>
+            <div style="background: var(--gray-50); padding: 1.5rem; border-radius: var(--radius-lg); margin-bottom: 1.5rem; border-left: 4px solid var(--primary-blue);">
+                <h3 style="margin: 0 0 1rem 0; color: var(--primary-blue); font-size: 1.125rem;">
+                    <?php echo !empty($reward_type) ? esc_html($reward_type) . ' ' : ''; ?>Rewards
+                </h3>
+                <?php if (!empty($reward_conversion_rate)): ?>
+                    <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                        <span style="color: var(--gray-700); font-weight: 500;">Conversion Rate:</span>
+                        <span style="color: var(--gray-900); font-weight: 600;"><?php echo esc_html($reward_conversion_rate); ?></span>
+                    </div>
+                <?php endif; ?>
+                <?php if ($reward_conversion_value > 0): ?>
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                        <span style="color: var(--gray-700); font-weight: 500;">Value:</span>
+                        <span style="color: var(--primary-green); font-weight: 600;">
+                            <?php 
+                            if ($reward_conversion_value == 1) {
+                                echo '1:1 (Full Value)';
+                            } else {
+                                echo esc_html(number_format($reward_conversion_value, 2)) . ' Rupees per unit';
+                            }
+                            ?>
+                        </span>
+                    </div>
+                <?php endif; ?>
+            </div>
+            <?php endif; ?>
+            
+            <?php if (!empty($rewards)): ?>
+                <div class="cc-data-table">
+                    <?php foreach ($rewards as $reward): ?>
+                        <div class="cc-table-row">
+                            <div>
+                                <div class="cc-table-label"><?php echo esc_html($reward['category'] ?? 'Reward Category'); ?></div>
+                                <?php if (isset($reward['description'])): ?>
+                                    <div style="font-size: 0.875rem; color: var(--gray-600); margin-top: 0.25rem;">
+                                        <?php echo esc_html($reward['description']); ?>
+                                    </div>
+                                <?php endif; ?>
+                            </div>
+                            <div class="cc-table-value positive">
+                                <?php echo esc_html($reward['rate'] ?? $reward); ?>
+                                <?php if (!empty($reward_type) && strtolower($reward_type) !== 'cashback'): ?>
+                                    <small style="display: block; font-weight: normal; opacity: 0.8;">
+                                        <?php echo esc_html($reward_type); ?>
+                                    </small>
                                 <?php endif; ?>
                             </div>
                         </div>
+                    <?php endforeach; ?>
+                </div>
+            <?php else: ?>
+                <div class="cc-data-table">
+                    <div class="cc-table-row">
+                        <div class="cc-table-label">Default Reward Rate</div>
+                        <div class="cc-table-value positive">
+                            <?php echo esc_html($cashback_rate); ?>
+                            <?php if (!empty($reward_type)): ?>
+                                <small style="display: block; font-weight: normal; opacity: 0.8;">
+                                    in <?php echo esc_html($reward_type); ?>
+                                </small>
+                            <?php endif; ?>
+                        </div>
                     </div>
-
-                    <div class="cc-hero-stats">
-                        <div class="cc-stat-box">
-                            <div class="label"><?php echo ccm_get_icon('credit-card', 'icon'); ?><span>Annual Fee</span></div>
-                            <p class="value"><?php echo esc_html(format_rupees($annual_fee)); ?></p>
-                        </div>
-                        <div class="cc-stat-box">
-                            <div class="label"><?php echo ccm_get_icon('gift', 'icon'); ?><span>Welcome Bonus</span></div>
-                            <p class="value"><?php echo esc_html($welcome_bonus); ?></p>
-                        </div>
-                    </div>
-
-                    <div class="cc-score-breakdown">
-                        <div class="overall">
-                            <span class="label">Overall Score</span>
-                            <span class="value"><?php echo esc_html($overall_score); ?>/5</span>
-                        </div>
-                        <div class="details">
-                            <div><span class="label">Rewards</span><span class="value"><?php echo esc_html($reward_score); ?>/5</span></div>
-                            <div><span class="label">Benefits</span><span class="value"><?php echo esc_html($benefits_score); ?>/5</span></div>
-                            <div><span class="label">Fees</span><span class="value"><?php echo esc_html($fees_score); ?>/5</span></div>
-                            <div><span class="label">Support</span><span class="value"><?php echo esc_html($support_score); ?>/5</span></div>
-                        </div>
+                    <div class="cc-table-row">
+                        <div class="cc-table-label">Welcome Bonus</div>
+                        <div class="cc-table-value positive"><?php echo esc_html($welcome_bonus); ?></div>
                     </div>
                 </div>
+            <?php endif; ?>
+        </section>
+        
+        <!-- Fees Section -->
+        <section id="fees" class="cc-section">
+            <h2 class="cc-section-title">Fees & Charges</h2>
+            
+            <div class="cc-data-table">
+                <div class="cc-table-row">
+                    <div class="cc-table-label">Joining Fee</div>
+                    <div class="cc-table-value <?php echo $joining_fee > 0 ? 'negative' : 'positive'; ?>">
+                        <?php echo esc_html(ccm_format_currency($joining_fee)); ?>
+                    </div>
+                </div>
+                
+                <div class="cc-table-row">
+                    <div class="cc-table-label">Annual Fee</div>
+                    <div class="cc-table-value <?php echo $annual_fee > 0 ? 'negative' : 'positive'; ?>">
+                        <?php echo esc_html(ccm_format_currency($annual_fee)); ?>
+                    </div>
+                </div>
+                
+                <?php if (!empty($fees)): ?>
+                    <?php foreach ($fees as $fee): ?>
+                        <div class="cc-table-row">
+                            <div class="cc-table-label"><?php echo esc_html($fee['type'] ?? 'Fee'); ?></div>
+                            <div class="cc-table-value negative"><?php echo esc_html($fee['amount'] ?? $fee); ?></div>
+                        </div>
+                    <?php endforeach; ?>
+                <?php endif; ?>
             </div>
-
-            <!-- QUICK ACTIONS BAR -->
-            <div class="cc-actions-bar">
-                <div class="cc-actions-bar-inner">
-                    <a href="<?php echo $apply_link; ?>" target="_blank" rel="noopener sponsored" class="cc-btn cc-btn-primary">
-                        <?php echo ccm_get_icon('zap', 'icon'); ?>
-                        <span>Apply Now</span>
-                    </a>
-                    <button class="cc-btn cc-btn-secondary" onclick="alert('Calculator feature coming soon!');">
-                        <?php echo ccm_get_icon('calculator', 'icon'); ?>
-                        <span>Calculator</span>
-                    </button>
-                </div>
+        </section>
+        
+        <!-- Eligibility Section -->
+        <section id="eligibility" class="cc-section">
+            <h2 class="cc-section-title">Eligibility Criteria</h2>
+            
+            <div class="cc-data-table">
+                <?php if (!empty($eligibility)): ?>
+                    <?php foreach ($eligibility as $criterion): ?>
+                        <div class="cc-table-row">
+                            <div class="cc-table-label"><?php echo esc_html($criterion['criteria'] ?? 'Criteria'); ?></div>
+                            <div class="cc-table-value"><?php echo esc_html($criterion['value'] ?? $criterion); ?></div>
+                        </div>
+                    <?php endforeach; ?>
+                <?php else: ?>
+                    <div class="cc-table-row">
+                        <div class="cc-table-label">Minimum Income</div>
+                        <div class="cc-table-value"><?php echo esc_html($min_income); ?></div>
+                    </div>
+                    <div class="cc-table-row">
+                        <div class="cc-table-label">Age Requirement</div>
+                        <div class="cc-table-value">21-65 years</div>
+                    </div>
+                    <div class="cc-table-row">
+                        <div class="cc-table-label">Employment</div>
+                        <div class="cc-table-value">Salaried/Self-employed</div>
+                    </div>
+                <?php endif; ?>
             </div>
-
-            <!-- TABS NAVIGATION -->
-            <div class="cc-tabs-nav">
-                <div class="cc-tabs-nav-inner">
-                    <button class="cc-tab-link active" data-tab="overview"><?php echo ccm_get_icon('overview', 'icon'); ?><span>Overview</span></button>
-                    <button class="cc-tab-link" data-tab="features"><?php echo ccm_get_icon('features', 'icon'); ?><span>Features</span></button>
-                    <button class="cc-tab-link" data-tab="rewards"><?php echo ccm_get_icon('rewards', 'icon'); ?><span>Rewards</span></button>
-                    <button class="cc-tab-link" data-tab="fees"><?php echo ccm_get_icon('fees', 'icon'); ?><span>Fees</span></button>
-                    <button class="cc-tab-link" data-tab="eligibility"><?php echo ccm_get_icon('eligibility', 'icon'); ?><span>Eligibility</span></button>
-                </div>
+            
+            <?php if (!empty($documents)): ?>
+            <div style="margin-top: 2rem;">
+                <h3>📄 Required Documents</h3>
+                <ul class="cc-list">
+                    <?php foreach ($documents as $document): ?>
+                        <li>
+                            <span class="icon">📄</span>
+                            <span><?php echo esc_html($document); ?></span>
+                        </li>
+                    <?php endforeach; ?>
+                </ul>
             </div>
-
-            <!-- TABS CONTENT -->
-            <div class="cc-content-wrap">
-                <!-- Overview Tab -->
-                <div id="overview" class="cc-tab-content active">
-                    <div class="cc-section">
-                        <h3 class="cc-section-title">Quick Overview</h3>
-                        <div class="cc-overview-grid">
-                            <div class="cc-overview-item"><?php echo ccm_get_icon('credit-card', 'icon'); ?><p class="label">Network</p><p class="value"><?php echo esc_html($network_type); ?></p></div>
-                            <div class="cc-overview-item"><?php echo ccm_get_icon('wallet', 'icon'); ?><p class="label">Credit Limit</p><p class="value"><?php echo esc_html($credit_limit); ?></p></div>
-                            <div class="cc-overview-item"><?php echo ccm_get_icon('clock', 'icon'); ?><p class="label">Processing Time</p><p class="value"><?php echo esc_html($processing_time); ?></p></div>
-                            <div class="cc-overview-item"><?php echo ccm_get_icon('trending-up', 'icon'); ?><p class="label">Min Income</p><p class="value"><?php echo esc_html($min_income); ?></p></div>
+            <?php endif; ?>
+        </section>
+        
+        <!-- FAQ Section -->
+        <section id="faq" class="cc-section">
+            <h2 class="cc-section-title">Frequently Asked Questions</h2>
+            
+            <?php 
+            $card_faqs = ccm_get_card_faqs(get_the_ID());
+            if (!empty($card_faqs)): ?>
+                <?php foreach ($card_faqs as $index => $faq): ?>
+                    <div class="cc-faq-item">
+                        <div class="cc-faq-question">
+                            <?php echo esc_html($faq['question']); ?>
+                            <span>+</span>
+                        </div>
+                        <div class="cc-faq-answer">
+                            <?php echo wp_kses_post($faq['answer']); ?>
                         </div>
                     </div>
-                    <div class="cc-pros-cons-grid">
-                        <?php if (!empty($pros)): ?>
-                        <div class="cc-section cc-list">
-                            <h4 class="cc-section-title" style="color: var(--cc-green-500);"><?php echo ccm_get_icon('check-circle', 'icon'); ?><span>Pros</span></h4>
-                            <ul><?php foreach ($pros as $pro) echo '<li><span class="icon pro">' . ccm_get_icon('check-circle') . '</span><span>' . esc_html($pro) . '</span></li>'; ?></ul>
-                        </div>
-                        <?php endif; ?>
-                        <?php if (!empty($cons)): ?>
-                        <div class="cc-section cc-list">
-                            <h4 class="cc-section-title" style="color: var(--cc-red-700);"><?php echo ccm_get_icon('x-circle', 'icon'); ?><span>Cons</span></h4>
-                            <ul><?php foreach ($cons as $con) echo '<li><span class="icon con">' . ccm_get_icon('x-circle') . '</span><span>' . esc_html($con) . '</span></li>'; ?></ul>
-                        </div>
-                        <?php endif; ?>
+                <?php endforeach; ?>
+            <?php else: ?>
+                <!-- Fallback FAQ -->
+                <div class="cc-faq-item">
+                    <div class="cc-faq-question">
+                        How long does it take to get approved?
+                        <span>+</span>
                     </div>
-                     <?php if (!empty($best_for)): ?>
-                    <div class="cc-section">
-                        <h3 class="cc-section-title" style="color: var(--cc-blue-700);"><?php echo ccm_get_icon('target', 'icon'); ?><span>Best For</span></h3>
-                        <div class="cc-best-for-tags"><?php foreach ($best_for as $item) echo '<span>' . esc_html($item) . '</span>'; ?></div>
-                    </div>
-                    <?php endif; ?>
-                </div>
-
-                <!-- Features Tab -->
-                <div id="features" class="cc-tab-content">
-                    <div class="cc-section">
-                        <h3 class="cc-section-title">Key Features</h3>
-                        <?php if (!empty($features)): foreach ($features as $feature): ?>
-                        <div class="cc-feature-item">
-                            <?php echo ccm_get_icon('gift', 'icon'); // Generic icon, can be dynamic ?>
-                            <div>
-                                <p class="title"><?php echo esc_html($feature['title']); ?></p>
-                                <p class="desc"><?php echo esc_html($feature['description']); ?></p>
-                            </div>
-                        </div>
-                        <?php endforeach; else: echo '<p>No specific features listed.</p>'; endif; ?>
+                    <div class="cc-faq-answer">
+                        Typically, the approval process takes <?php echo esc_html($processing_time); ?>. In some cases, instant approval is available for eligible applicants.
                     </div>
                 </div>
-
-                <!-- Rewards Tab -->
-                <div id="rewards" class="cc-tab-content">
-                    <div class="cc-section cc-data-table">
-                        <h3 class="cc-section-title">Reward Program</h3>
-                        <?php if (!empty($rewards)): foreach ($rewards as $reward): ?>
-                        <div class="item">
-                            <div>
-                                <p class="label"><?php echo esc_html($reward['category']); ?></p>
-                                <p style="font-size: 0.8rem; color: var(--cc-gray-600);"><?php echo esc_html($reward['description']); ?></p>
-                            </div>
-                            <span class="value positive"><?php echo esc_html($reward['rate']); ?></span>
-                        </div>
-                        <?php endforeach; else: echo '<p>No reward details available.</p>'; endif; ?>
-                    </div>
-                </div>
-
-                <!-- Fees Tab -->
-                <div id="fees" class="cc-tab-content">
-                     <div class="cc-section cc-data-table">
-                        <h3 class="cc-section-title">Fees & Charges</h3>
-                        <div class="item"><span class="label">Joining Fee</span><span class="value negative"><?php echo esc_html(format_rupees($joining_fee)); ?></span></div>
-                        <div class="item"><span class="label">Annual Fee</span><span class="value negative"><?php echo esc_html(format_rupees($annual_fee)); ?></span></div>
-                        <?php if (!empty($fees)): foreach ($fees as $fee): ?>
-                        <div class="item">
-                            <span class="label"><?php echo esc_html($fee['type']); ?></span>
-                            <span class="value negative"><?php echo esc_html($fee['amount']); ?></span>
-                        </div>
-                        <?php endforeach; endif; ?>
-                    </div>
-                </div>
-
-                <!-- Eligibility Tab -->
-                <div id="eligibility" class="cc-tab-content">
-                    <div class="cc-section cc-data-table">
-                        <h3 class="cc-section-title">Eligibility Criteria</h3>
-                         <?php if (!empty($eligibility)): foreach ($eligibility as $criterion): ?>
-                         <div class="item">
-                             <span class="label"><?php echo esc_html($criterion['criteria']); ?></span>
-                             <span class="value"><?php echo esc_html($criterion['value']); ?></span>
-                         </div>
-                         <?php endforeach; else: echo '<p>No eligibility criteria listed.</p>'; endif; ?>
-                    </div>
-                    <?php if (!empty($documents)): ?>
-                    <div class="cc-section cc-list">
-                        <h3 class="cc-section-title"><?php echo ccm_get_icon('file-text', 'icon'); ?><span>Required Documents</span></h3>
-                        <ul><?php foreach ($documents as $doc) echo '<li><span class="icon">' . ccm_get_icon('file-text') . '</span><span>' . esc_html($doc) . '</span></li>'; ?></ul>
-                    </div>
-                    <?php endif; ?>
-                </div>
-
-                <!-- Bottom CTA -->
-                <div class="cc-bottom-cta">
-                    <h3>Ready to Apply?</h3>
-                    <p>Join thousands of satisfied customers and start earning rewards today!</p>
-                     <a href="<?php echo $apply_link; ?>" target="_blank" rel="noopener sponsored" class="cc-btn">
-                        <?php echo ccm_get_icon('zap', 'icon'); ?>
-                        <span>Apply Now</span>
-                        <?php echo ccm_get_icon('arrow-right', 'icon'); ?>
-                    </a>
-                </div>
-                <div class="cc-section">
-                    <?php
-                    error_log('Comments open: ' . (comments_open() ? 'yes' : 'no'));
-                    error_log('Number of comments: ' . get_comments_number());
-                    // If comments are open or we have at least one comment, load up the comment template.
-                    if (comments_open() || get_comments_number()) :
-                        comments_template();
-                    endif;
-                    ?>
-                </div>
-            </div>
-        </article>
+            <?php endif; ?>
+        </section>
+        
+        <!-- Bottom CTA -->
+        <section class="cc-bottom-cta">
+            <h3>Ready to Apply for <?php echo esc_html($card_name); ?>?</h3>
+            <p>Join thousands of satisfied customers and start earning rewards today. Apply online in just 5 minutes!</p>
+            <a href="<?php echo $apply_link; ?>" target="_blank" rel="noopener" class="cc-cta-button">
+                Apply Now - Get Instant Approval ⚡
+            </a>
+        </section>
     </main>
 </div>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    const tabLinks = document.querySelectorAll('.cc-tab-link');
-    const tabContents = document.querySelectorAll('.cc-tab-content');
-
-    tabLinks.forEach(link => {
-        link.addEventListener('click', () => {
-            const tabId = link.getAttribute('data-tab');
-
-            tabLinks.forEach(item => item.classList.remove('active'));
-            link.classList.add('active');
-
-            tabContents.forEach(content => {
-                content.classList.toggle('active', content.id === tabId);
+    // Smooth scrolling for navigation links
+    const navLinks = document.querySelectorAll('.cc-nav-link');
+    const sections = document.querySelectorAll('.cc-section');
+    
+    navLinks.forEach(link => {
+        link.addEventListener('click', function(e) {
+            e.preventDefault();
+            const targetId = this.getAttribute('href').substring(1);
+            const targetSection = document.getElementById(targetId);
+            
+            if (targetSection) {
+                const offsetTop = targetSection.offsetTop - 100;
+                window.scrollTo({
+                    top: offsetTop,
+                    behavior: 'smooth'
+                });
+            }
+        });
+    });
+    
+    // Update active navigation on scroll
+    window.addEventListener('scroll', function() {
+        let current = '';
+        sections.forEach(section => {
+            const sectionTop = section.offsetTop - 150;
+            if (scrollY >= sectionTop) {
+                current = section.getAttribute('id');
+            }
+        });
+        
+        navLinks.forEach(link => {
+            link.classList.remove('active');
+            if (link.getAttribute('href').substring(1) === current) {
+                link.classList.add('active');
+            }
+        });
+    });
+    
+    // FAQ toggle functionality
+    const faqItems = document.querySelectorAll('.cc-faq-item');
+    faqItems.forEach(item => {
+        const question = item.querySelector('.cc-faq-question');
+        const answer = item.querySelector('.cc-faq-answer');
+        const icon = question.querySelector('span');
+        
+        question.addEventListener('click', function() {
+            const isActive = item.classList.contains('active');
+            
+            // Close all other FAQ items
+            faqItems.forEach(otherItem => {
+                otherItem.classList.remove('active');
+                otherItem.querySelector('.cc-faq-question span').textContent = '+';
             });
+            
+            // Toggle current item
+            if (!isActive) {
+                item.classList.add('active');
+                icon.textContent = '−';
+            }
+        });
+    });
+    
+    // Apply button click tracking
+    const applyButtons = document.querySelectorAll('.cc-apply-btn, .cc-cta-button');
+    applyButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            // Track apply button clicks (you can integrate with analytics here)
+            console.log('Apply button clicked for:', '<?php echo esc_js($card_name); ?>');
         });
     });
 });
 </script>
 
 <?php
-get_footer();
+// Output FAQ schema for SEO
+$card_faqs = ccm_get_card_faqs(get_the_ID());
+if (!empty($card_faqs)) {
+    $faq_schema = ccm_generate_faq_schema($card_faqs);
+    if ($faq_schema) {
+        echo '<script type="application/ld+json">' . "\n";
+        echo wp_json_encode($faq_schema, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) . "\n";
+        echo '</script>' . "\n";
+    }
+}
+?>
+
+<?php get_footer(); ?>

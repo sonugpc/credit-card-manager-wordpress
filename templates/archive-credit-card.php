@@ -19,9 +19,6 @@ $current_trending = isset($_GET['trending']) ? sanitize_text_field($_GET['trendi
 $current_sort = isset($_GET['sort_by']) ? sanitize_text_field($_GET['sort_by']) : 'rating';
 $current_order = isset($_GET['sort_order']) ? sanitize_text_field($_GET['sort_order']) : 'desc';
 
-// Check if we're in comparison mode
-$compare_mode = isset($_GET['compare']) && !empty($_GET['compare']);
-$compare_ids = $compare_mode ? explode(',', sanitize_text_field($_GET['compare'])) : [];
 
 // Get filter data from API
 $filters_response = wp_remote_get(rest_url('ccm/v1/credit-cards/filters'));
@@ -30,7 +27,7 @@ $filters = !is_wp_error($filters_response) ? json_decode(wp_remote_retrieve_body
 // Build query args for credit cards
 $args = [
     'post_type' => 'credit-card',
-    'posts_per_page' => $compare_mode ? -1 : 12,
+    'posts_per_page' => 12,
     'paged' => get_query_var('paged') ? get_query_var('paged') : 1,
     'meta_query' => [],
     'tax_query' => [],
@@ -95,34 +92,26 @@ if ($current_trending === '1') {
     ];
 }
 
-// For comparison mode, get specific cards
-if ($compare_mode && !empty($compare_ids)) {
-    $args['post__in'] = $compare_ids;
-    $args['orderby'] = 'post__in';
-    unset($args['meta_query']);
-    unset($args['tax_query']);
-} else {
-    // Sorting logic
-    switch ($current_sort) {
-        case 'rating':
-            $args['meta_key'] = 'rating';
-            $args['orderby'] = 'meta_value_num';
-            $args['order'] = strtoupper($current_order);
-            break;
-        case 'annual_fee':
-            $args['meta_key'] = 'annual_fee_numeric';
-            $args['orderby'] = 'meta_value_num';
-            $args['order'] = strtoupper($current_order);
-            break;
-        case 'review_count':
-            $args['meta_key'] = 'review_count';
-            $args['orderby'] = 'meta_value_num';
-            $args['order'] = strtoupper($current_order);
-            break;
-        default:
-            $args['orderby'] = 'date';
-            $args['order'] = strtoupper($current_order);
-    }
+// Sorting logic
+switch ($current_sort) {
+    case 'rating':
+        $args['meta_key'] = 'rating';
+        $args['orderby'] = 'meta_value_num';
+        $args['order'] = strtoupper($current_order);
+        break;
+    case 'annual_fee':
+        $args['meta_key'] = 'annual_fee_numeric';
+        $args['orderby'] = 'meta_value_num';
+        $args['order'] = strtoupper($current_order);
+        break;
+    case 'review_count':
+        $args['meta_key'] = 'review_count';
+        $args['orderby'] = 'meta_value_num';
+        $args['order'] = strtoupper($current_order);
+        break;
+    default:
+        $args['orderby'] = 'date';
+        $args['order'] = strtoupper($current_order);
 }
 
 // Set relations for queries
@@ -279,103 +268,24 @@ if (!function_exists('ccm_has_seo_plugin') || !ccm_has_seo_plugin()) {
         </div>
     </section>
 
-    <?php if ($compare_mode): ?>
-        <!-- Comparison Mode -->
-        <div class="ccv2-filter-section">
-            <div class="ccv2-filter-header">
-                <h2 class="ccv2-filter-title">
-                    <?php echo ccm_get_icon('compare', 'icon'); ?>
-                    Credit Card Comparison
-                </h2>
-                <a href="<?php echo get_post_type_archive_link('credit-card'); ?>" class="ccv2-filter-toggle">
-                    <?php echo ccm_get_icon('x', 'icon'); ?> Exit Comparison
-                </a>
-            </div>
-            <p>Compare the selected credit cards side by side to find the best option for your needs.</p>
-        </div>
-
-        <?php if ($credit_cards->have_posts()): ?>
-            <!-- Comparison Table (Enhanced version of existing comparison table) -->
-            <div style="overflow-x: auto; background: white; border-radius: var(--radius-2xl); box-shadow: var(--shadow-lg); margin-bottom: var(--space-8);">
-                <table style="width: 100%; border-collapse: collapse; min-width: 800px;">
-                    <thead>
-                        <tr style="background: var(--neutral-50);">
-                            <th style="padding: var(--space-6); text-align: left; font-weight: 700; color: var(--neutral-800); border-bottom: 2px solid var(--neutral-200);">Features</th>
-                            <?php while ($credit_cards->have_posts()): $credit_cards->the_post(); ?>
-                                <th style="padding: var(--space-6); text-align: center; font-weight: 700; color: var(--neutral-800); border-bottom: 2px solid var(--neutral-200); min-width: 200px;">
-                                    <?php the_title(); ?>
-                                </th>
-                            <?php endwhile; wp_reset_postdata(); ?>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <!-- Card Images -->
-                        <tr>
-                            <td style="padding: var(--space-4); font-weight: 600; color: var(--neutral-700); border-bottom: 1px solid var(--neutral-200);">Card Image</td>
-                            <?php while ($credit_cards->have_posts()): $credit_cards->the_post(); 
-                                $card_image = ccm_get_meta(get_the_ID(), 'card_image_url', '');
-                                if (empty($card_image) && has_post_thumbnail()) {
-                                    $card_image = get_the_post_thumbnail_url(get_the_ID(), 'medium');
-                                }
-                            ?>
-                                <td style="padding: var(--space-4); text-align: center; border-bottom: 1px solid var(--neutral-200);">
-                                    <?php if (!empty($card_image)): ?>
-                                        <img src="<?php echo esc_url($card_image); ?>" alt="<?php the_title(); ?>" style="max-width: 150px; max-height: 100px; object-fit: contain; border-radius: var(--radius-md);">
-                                    <?php endif; ?>
-                                </td>
-                            <?php endwhile; wp_reset_postdata(); ?>
-                        </tr>
-                        
-                        <!-- Continue with other comparison rows using the enhanced styling -->
-                        <!-- (Bank, Network, Rating, Annual Fee, etc. - keeping the same data structure) -->
-                        
-                        <!-- Apply Now Row -->
-                        <tr style="background: var(--neutral-50);">
-                            <td style="padding: var(--space-6); font-weight: 700; color: var(--neutral-800);">Apply Now</td>
-                            <?php while ($credit_cards->have_posts()): $credit_cards->the_post(); 
-                                $apply_link = ccm_get_meta(get_the_ID(), 'apply_link', '#');
-                            ?>
-                                <td style="padding: var(--space-6); text-align: center;">
-                                    <a href="<?php echo esc_url($apply_link); ?>" class="ccv2-btn ccv2-btn-primary" target="_blank" rel="noopener">
-                                        Apply Now
-                                    </a>
-                                </td>
-                            <?php endwhile; wp_reset_postdata(); ?>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        <?php else: ?>
-            <div class="ccv2-no-results">
-                <?php echo ccm_get_icon('info', 'ccv2-no-results-icon'); ?>
-                <h3>No cards selected for comparison</h3>
-                <p>Please select at least two credit cards to compare their features side by side.</p>
-                <a href="<?php echo get_post_type_archive_link('credit-card'); ?>" class="ccv2-btn ccv2-btn-primary">
-                    Browse Credit Cards
-                </a>
-            </div>
-        <?php endif; ?>
-    <?php else: ?>
-        <!-- Regular Archive View -->
+    <!-- Regular Archive View -->
         
-        <!-- Enhanced Filter Section -->
-        <form class="ccv2-filter-section" method="get" action="<?php echo get_post_type_archive_link('credit-card'); ?>">
-            <div class="ccv2-filter-header">
-                <h2 class="ccv2-filter-title">
-                    <?php echo ccm_get_icon('filter', 'icon'); ?>
-                    Find Your Ideal Credit Card
+        <!-- Simplified Filter Section -->
+        <form class="ccv2-filter-section" method="get" action="<?php echo get_post_type_archive_link('credit-card'); ?>" style="background: white; margin: 1rem 1.5rem; padding: 1.5rem; border-radius: 8px; border: 1px solid #e5e7eb;">
+            <div class="ccv2-filter-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <h2 class="ccv2-filter-title" style="margin: 0; font-size: 1.25rem; font-weight: 600; color: #1f2937;">
+                    🔍 Find Your Ideal Credit Card
                 </h2>
-                <button type="button" class="ccv2-filter-toggle" id="toggle-filters">
-                    <?php echo ccm_get_icon('minus', 'icon'); ?>
-                    <span>Hide Filters</span>
+                <button type="button" class="ccv2-filter-toggle" id="toggle-filters" style="background: #f3f4f6; border: 1px solid #d1d5db; padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; font-size: 0.875rem;">
+                    <span id="toggle-text">Hide Filters</span>
                 </button>
             </div>
             
-            <div class="ccv2-filter-grid" id="filter-content">
+            <div class="ccv2-filter-grid" id="filter-content" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1rem;">
                 <?php if (!empty($filters['banks'])): ?>
                 <div class="ccv2-filter-group">
-                    <label class="ccv2-filter-label" for="bank">Bank/Issuer</label>
-                    <select class="ccv2-filter-select" name="bank" id="bank">
+                    <label class="ccv2-filter-label" for="bank" style="display: block; margin-bottom: 0.5rem; font-weight: 500; color: #374151;">Bank/Issuer</label>
+                    <select class="ccv2-filter-select" name="bank" id="bank" style="width: 100%; padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 6px; background: white;">
                         <option value="">All Banks</option>
                         <?php foreach ($filters['banks'] as $bank): ?>
                             <option value="<?php echo esc_attr($bank['slug']); ?>" <?php selected($current_bank, $bank['slug']); ?>>
@@ -386,10 +296,15 @@ if (!function_exists('ccm_has_seo_plugin') || !ccm_has_seo_plugin()) {
                 </div>
                 <?php endif; ?>
                 
+                <?php 
+                $select_style = 'width: 100%; padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 6px; background: white;';
+                $label_style = 'display: block; margin-bottom: 0.5rem; font-weight: 500; color: #374151;';
+                ?>
+                
                 <?php if (!empty($filters['network_types'])): ?>
                 <div class="ccv2-filter-group">
-                    <label class="ccv2-filter-label" for="network_type">Network Type</label>
-                    <select class="ccv2-filter-select" name="network_type" id="network_type">
+                    <label class="ccv2-filter-label" for="network_type" style="<?php echo $label_style; ?>">Network Type</label>
+                    <select class="ccv2-filter-select" name="network_type" id="network_type" style="<?php echo $select_style; ?>">
                         <option value="">All Networks</option>
                         <?php foreach ($filters['network_types'] as $network): ?>
                             <option value="<?php echo esc_attr($network['slug']); ?>" <?php selected($current_network, $network['slug']); ?>>
@@ -402,8 +317,8 @@ if (!function_exists('ccm_has_seo_plugin') || !ccm_has_seo_plugin()) {
                 
                 <?php if (!empty($filters['categories'])): ?>
                 <div class="ccv2-filter-group">
-                    <label class="ccv2-filter-label" for="category">Category</label>
-                    <select class="ccv2-filter-select" name="category" id="category">
+                    <label class="ccv2-filter-label" for="category" style="<?php echo $label_style; ?>">Category</label>
+                    <select class="ccv2-filter-select" name="category" id="category" style="<?php echo $select_style; ?>">
                         <option value="">All Categories</option>
                         <?php foreach ($filters['categories'] as $category): ?>
                             <option value="<?php echo esc_attr($category['slug']); ?>" <?php selected($current_category, $category['slug']); ?>>
@@ -416,8 +331,8 @@ if (!function_exists('ccm_has_seo_plugin') || !ccm_has_seo_plugin()) {
                 
                 <?php if (!empty($filters['rating_ranges'])): ?>
                 <div class="ccv2-filter-group">
-                    <label class="ccv2-filter-label" for="min_rating">Minimum Rating</label>
-                    <select class="ccv2-filter-select" name="min_rating" id="min_rating">
+                    <label class="ccv2-filter-label" for="min_rating" style="<?php echo $label_style; ?>">Minimum Rating</label>
+                    <select class="ccv2-filter-select" name="min_rating" id="min_rating" style="<?php echo $select_style; ?>">
                         <option value="">Any Rating</option>
                         <?php foreach ($filters['rating_ranges'] as $range): ?>
                             <option value="<?php echo esc_attr($range['min']); ?>" <?php selected($current_min_rating, $range['min']); ?>>
@@ -430,8 +345,8 @@ if (!function_exists('ccm_has_seo_plugin') || !ccm_has_seo_plugin()) {
                 
                 <?php if (!empty($filters['fee_ranges'])): ?>
                 <div class="ccv2-filter-group">
-                    <label class="ccv2-filter-label" for="max_annual_fee">Maximum Annual Fee</label>
-                    <select class="ccv2-filter-select" name="max_annual_fee" id="max_annual_fee">
+                    <label class="ccv2-filter-label" for="max_annual_fee" style="<?php echo $label_style; ?>">Maximum Annual Fee</label>
+                    <select class="ccv2-filter-select" name="max_annual_fee" id="max_annual_fee" style="<?php echo $select_style; ?>">
                         <option value="">Any Fee</option>
                         <?php foreach ($filters['fee_ranges'] as $range): ?>
                             <option value="<?php echo esc_attr($range['max']); ?>" <?php selected($current_max_fee, $range['max']); ?>>
@@ -443,8 +358,8 @@ if (!function_exists('ccm_has_seo_plugin') || !ccm_has_seo_plugin()) {
                 <?php endif; ?>
                 
                 <div class="ccv2-filter-group">
-                    <label class="ccv2-filter-label" for="featured">Card Type</label>
-                    <select class="ccv2-filter-select" name="featured" id="featured">
+                    <label class="ccv2-filter-label" for="featured" style="<?php echo $label_style; ?>">Card Type</label>
+                    <select class="ccv2-filter-select" name="featured" id="featured" style="<?php echo $select_style; ?>">
                         <option value="">All Cards</option>
                         <option value="1" <?php selected($current_featured, '1'); ?>>Featured Cards</option>
                         <option value="0" <?php selected($current_featured, '0'); ?>>Regular Cards</option>
@@ -452,13 +367,12 @@ if (!function_exists('ccm_has_seo_plugin') || !ccm_has_seo_plugin()) {
                 </div>
             </div>
             
-            <div class="ccv2-filter-actions">
-                <button type="reset" class="ccv2-btn ccv2-btn-secondary">
+            <div class="ccv2-filter-actions" style="display: flex; gap: 1rem; justify-content: center;">
+                <button type="reset" style="padding: 0.75rem 1.5rem; background: #f3f4f6; color: #374151; border: 1px solid #d1d5db; border-radius: 6px; cursor: pointer;">
                     Reset Filters
                 </button>
-                <button type="submit" class="ccv2-btn ccv2-btn-primary">
-                    <?php echo ccm_get_icon('filter', 'icon'); ?>
-                    Apply Filters
+                <button type="submit" style="padding: 0.75rem 1.5rem; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer;">
+                    🔍 Apply Filters
                 </button>
             </div>
         </form>
@@ -513,14 +427,11 @@ if (!function_exists('ccm_has_seo_plugin') || !ccm_has_seo_plugin()) {
         </div>
 
         <?php if ($credit_cards->have_posts()): ?>
-            <!-- Enhanced Cards Grid -->
-            <div class="ccv2-cards-grid">
+            <!-- Compact Cards Grid -->
+            <div class="ccv2-cards-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1rem; margin: 1rem 1.5rem;">
                 <?php while ($credit_cards->have_posts()): $credit_cards->the_post(); 
                     $post_id = get_the_ID();
-                    $card_image = ccm_get_meta($post_id, 'card_image_url', '');
-                    if (empty($card_image) && has_post_thumbnail()) {
-                        $card_image = get_the_post_thumbnail_url($post_id, 'medium');
-                    }
+                    $card_image = has_post_thumbnail() ? get_the_post_thumbnail_url($post_id, 'medium') : '';
                     
                     $rating = ccm_get_meta($post_id, 'rating', 0, true);
                     $review_count = ccm_get_meta($post_id, 'review_count', 0, true);
@@ -536,55 +447,43 @@ if (!function_exists('ccm_has_seo_plugin') || !ccm_has_seo_plugin()) {
                     
                     $pros = ccm_get_meta($post_id, 'pros', [], false, true);
                 ?>
-                <article class="ccv2-card" data-id="<?php echo esc_attr($post_id); ?>">
-                    <!-- Compare Button -->
-                    <button type="button" class="ccv2-btn-compare" data-id="<?php echo esc_attr($post_id); ?>">
-                        <?php echo ccm_get_icon('compare', 'icon'); ?>
-                        <span>Compare</span>
-                    </button>
+                <article class="ccv2-card" data-id="<?php echo esc_attr($post_id); ?>" style="background: white; border: 1px solid #e5e7eb; border-radius: 8px; padding: 1rem; position: relative; height: fit-content;">
+                    <?php if ($featured): ?>
+                        <span style="position: absolute; top: 0.5rem; left: 0.5rem; background: #f59e0b; color: white; padding: 0.25rem 0.5rem; border-radius: 12px; font-size: 0.75rem; z-index: 2;">
+                            ⭐ Featured
+                        </span>
+                    <?php endif; ?>
+                    
+                    <?php if ($trending): ?>
+                        <span style="position: absolute; top: 0.5rem; right: 0.5rem; background: #ef4444; color: white; padding: 0.25rem 0.5rem; border-radius: 12px; font-size: 0.75rem; z-index: 2;">
+                            🔥 Trending
+                        </span>
+                    <?php endif; ?>
                     
                     <!-- Card Header -->
-                    <header class="ccv2-card-header">
-                        <!-- Badges -->
-                        <div class="ccv2-card-badges">
-                            <?php if ($featured): ?>
-                                <span class="ccv2-badge ccv2-badge-featured">
-                                    <?php echo ccm_get_icon('award', 'icon'); ?>
-                                    Featured
-                                </span>
-                            <?php endif; ?>
-                            
-                            <?php if ($trending): ?>
-                                <span class="ccv2-badge ccv2-badge-trending">
-                                    <?php echo ccm_get_icon('trending-up', 'icon'); ?>
-                                    Trending
-                                </span>
-                            <?php endif; ?>
-                        </div>
+                    <header style="text-align: center; margin-bottom: 1rem;">
                         
                         <!-- Card Image -->
-                        <div class="ccv2-card-image">
+                        <div style="margin-bottom: 0.75rem;">
                             <?php if (!empty($card_image)): ?>
-                                <img src="<?php echo esc_url($card_image); ?>" alt="<?php the_title(); ?>">
+                                <img src="<?php echo esc_url($card_image); ?>" alt="<?php the_title(); ?>" style="width: 120px; height: auto; object-fit: contain; border-radius: 6px;">
                             <?php endif; ?>
                         </div>
                         
                         <!-- Card Title -->
-                        <h3 class="ccv2-card-title"><?php the_title(); ?></h3>
+                        <h3 style="margin: 0 0 0.25rem 0; font-size: 1.1rem; font-weight: 600; color: #1f2937;"><?php the_title(); ?></h3>
                         
                         <?php if (!empty($bank_name)): ?>
-                            <div class="ccv2-card-bank"><?php echo esc_html($bank_name); ?></div>
+                            <div style="color: #6b7280; font-size: 0.875rem; margin-bottom: 0.5rem;"><?php echo esc_html($bank_name); ?></div>
                         <?php endif; ?>
                         
                         <!-- Rating -->
                         <?php if ($rating > 0): ?>
-                            <div class="ccv2-card-rating">
-                                <div class="ccv2-rating-stars">
-                                    <?php for ($i = 1; $i <= 5; $i++): ?>
-                                        <?php echo ccm_get_icon('star', 'icon'); ?>
-                                    <?php endfor; ?>
+                            <div style="margin-bottom: 0.75rem;">
+                                <div style="color: #f59e0b; margin-bottom: 0.25rem;">
+                                    <?php echo str_repeat('⭐', floor($rating)); ?>
                                 </div>
-                                <span class="ccv2-rating-text">
+                                <span style="font-size: 0.75rem; color: #6b7280;">
                                     <?php echo esc_html($rating); ?>/5
                                     <?php if ($review_count > 0): ?>
                                         (<?php echo esc_html($review_count); ?> reviews)
@@ -595,50 +494,51 @@ if (!function_exists('ccm_has_seo_plugin') || !ccm_has_seo_plugin()) {
                     </header>
                     
                     <!-- Card Content -->
-                    <div class="ccv2-card-content">
-                        <!-- Key Highlights -->
-                        <div class="ccv2-card-highlights">
-                            <div class="ccv2-highlight">
-                                <?php echo ccm_get_icon('credit-card', 'ccv2-highlight-icon'); ?>
-                                <div class="ccv2-highlight-label">Annual Fee</div>
-                                <div class="ccv2-highlight-value"><?php echo esc_html($annual_fee); ?></div>
+                    <div style="margin-bottom: 1rem;">
+                        <!-- Compact Key Highlights -->
+                        <div style="margin-bottom: 1rem; font-size: 0.8rem; line-height: 1.4;">
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 0.25rem;">
+                                <span style="color: #6b7280;">Annual Fee:</span>
+                                <span style="font-weight: 600; color: #1f2937;"><?php echo esc_html($annual_fee); ?></span>
                             </div>
-                            
-                            <div class="ccv2-highlight">
-                                <?php echo ccm_get_icon('percentage', 'ccv2-highlight-icon'); ?>
-                                <div class="ccv2-highlight-label">Reward Rate</div>
-                                <div class="ccv2-highlight-value"><?php echo esc_html($cashback_rate); ?></div>
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 0.25rem;">
+                                <span style="color: #6b7280;">Reward Rate:</span>
+                                <span style="font-weight: 600; color: #1f2937;"><?php echo esc_html($cashback_rate); ?></span>
                             </div>
-                            
-                            <div class="ccv2-highlight" style="grid-column: 1 / -1;">
-                                <?php echo ccm_get_icon('gift', 'ccv2-highlight-icon'); ?>
-                                <div class="ccv2-highlight-label">Welcome Bonus</div>
-                                <div class="ccv2-highlight-value"><?php echo esc_html($welcome_bonus); ?></div>
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                                <span style="color: #6b7280;">Welcome Bonus:</span>
+                                <span style="font-weight: 600; color: #1f2937;"><?php echo esc_html($welcome_bonus); ?></span>
                             </div>
                         </div>
                         
                         <!-- Key Features -->
                         <?php if (!empty($pros) && is_array($pros)): ?>
-                            <div class="ccv2-card-features">
-                                <?php foreach (array_slice($pros, 0, 3) as $pro): ?>
-                                    <div class="ccv2-feature-item">
-                                        <?php echo ccm_get_icon('check', 'icon'); ?>
-                                        <span class="ccv2-feature-text"><?php echo esc_html($pro); ?></span>
+                            <div style="margin-bottom: 1rem;">
+                                <?php foreach (array_slice($pros, 0, 2) as $pro): ?>
+                                    <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem; font-size: 0.8rem; color: #6b7280;">
+                                        <span style="color: #10b981;">✓</span>
+                                        <span><?php echo esc_html($pro); ?></span>
                                     </div>
                                 <?php endforeach; ?>
                             </div>
                         <?php endif; ?>
                         
                         <!-- Action Buttons -->
-                        <div class="ccv2-card-actions">
-                            <a href="<?php the_permalink(); ?>" class="ccv2-btn ccv2-btn-details">
-                                <?php echo ccm_get_icon('info', 'icon'); ?>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-bottom: 0.75rem;">
+                            <a href="<?php the_permalink(); ?>" style="padding: 0.5rem; text-align: center; background: #f3f4f6; color: #374151; border-radius: 6px; text-decoration: none; font-size: 0.875rem;">
                                 Details
                             </a>
-                            <a href="<?php echo esc_url($apply_link); ?>" class="ccv2-btn ccv2-btn-apply" target="_blank" rel="noopener">
+                            <a href="<?php echo esc_url($apply_link); ?>" target="_blank" rel="noopener" style="padding: 0.5rem; text-align: center; background: #3b82f6; color: white; border-radius: 6px; text-decoration: none; font-size: 0.875rem;">
                                 Apply Now
-                                <?php echo ccm_get_icon('arrow-right', 'icon'); ?>
                             </a>
+                        </div>
+                        
+                        <!-- Compare Checkbox -->
+                        <div style="text-align: center;">
+                            <label style="display: inline-flex; align-items: center; gap: 0.5rem; cursor: pointer; font-size: 0.8rem; color: #6b7280;">
+                                <input type="checkbox" class="ccv2-compare-checkbox" data-id="<?php echo esc_attr($post_id); ?>" style="margin: 0;">
+                                <span>Compare this card</span>
+                            </label>
                         </div>
                     </div>
                 </article>
@@ -684,52 +584,39 @@ if (!function_exists('ccm_has_seo_plugin') || !ccm_has_seo_plugin()) {
             </div>
         <?php endif; ?>
         
-        <!-- Enhanced Comparison Bar -->
-        <div class="ccv2-comparison-bar" id="comparison-bar">
-            <div class="ccv2-comparison-content">
-                <div class="ccv2-comparison-info">
-                    <?php echo ccm_get_icon('compare', 'ccv2-comparison-icon'); ?>
-                    <div class="ccv2-comparison-text">
-                        <span class="ccv2-comparison-count" id="selected-count">0</span>
-                        cards selected for comparison
+        <!-- Compact Comparison Bar -->
+        <div class="ccv2-comparison-bar" id="comparison-bar" style="position: fixed; bottom: 0; left: 0; right: 0; background: #1f2937; color: white; padding: 0.75rem; z-index: 1000; transform: translateY(100%); transition: transform 0.3s ease;">
+            <div style="max-width: 1200px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between;">
+                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                    <span>⚖️</span>
+                    <div style="font-size: 0.875rem;">
+                        <span id="selected-count">0</span> cards selected
                     </div>
                 </div>
-                <div class="ccv2-comparison-actions">
-                    <button type="button" class="ccv2-btn ccv2-btn-clear" id="clear-comparison">
-                        Clear All
+                <div style="display: flex; gap: 0.5rem;">
+                    <button type="button" id="clear-comparison" style="padding: 0.5rem 1rem; background: transparent; color: white; border: 1px solid #374151; border-radius: 4px; cursor: pointer; font-size: 0.875rem;">
+                        Clear
                     </button>
-                    <button type="button" class="ccv2-btn ccv2-btn-compare-now" id="compare-now" disabled>
-                        <?php echo ccm_get_icon('compare', 'icon'); ?>
-                        Compare Now
+                    <button type="button" id="compare-now" disabled style="padding: 0.5rem 1rem; background: #3b82f6; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.875rem;">
+                        Compare
                     </button>
                 </div>
             </div>
         </div>
-    <?php endif; ?>
 </div>
 
 <script>
 (function() {
-    // Enhanced filter toggle functionality
+    // Filter toggle functionality
     const toggleBtn = document.getElementById('toggle-filters');
     const filterContent = document.getElementById('filter-content');
+    const toggleText = document.getElementById('toggle-text');
     
-    if (toggleBtn && filterContent) {
+    if (toggleBtn && filterContent && toggleText) {
         toggleBtn.addEventListener('click', function() {
             const isVisible = filterContent.style.display !== 'none';
             filterContent.style.display = isVisible ? 'none' : 'grid';
-            const spanText = toggleBtn.querySelector('span');
-            const iconEl = toggleBtn.querySelector('svg');
-            
-            if (spanText) {
-                spanText.textContent = isVisible ? 'Show Filters' : 'Hide Filters';
-            }
-            
-            if (iconEl) {
-                iconEl.outerHTML = isVisible 
-                    ? '<?php echo ccm_get_icon('plus', 'icon'); ?>'
-                    : '<?php echo ccm_get_icon('minus', 'icon'); ?>';
-            }
+            toggleText.textContent = isVisible ? 'Show Filters' : 'Hide Filters';
         });
     }
     
@@ -744,7 +631,7 @@ if (!function_exists('ccm_has_seo_plugin') || !ccm_has_seo_plugin()) {
     
     // Enhanced comparison functionality
     const comparisonBar = document.getElementById('comparison-bar');
-    const compareButtons = document.querySelectorAll('.ccv2-btn-compare');
+    const compareCheckboxes = document.querySelectorAll('.ccv2-compare-checkbox');
     const clearComparisonBtn = document.getElementById('clear-comparison');
     const compareNowBtn = document.getElementById('compare-now');
     const selectedCountEl = document.getElementById('selected-count');
@@ -773,34 +660,21 @@ if (!function_exists('ccm_has_seo_plugin') || !ccm_has_seo_plugin()) {
     
     // Update UI based on selected cards
     function updateComparisonUI() {
-        // Update buttons
-        compareButtons.forEach(btn => {
-            const cardId = btn.getAttribute('data-id');
+        // Update checkboxes
+        compareCheckboxes.forEach(checkbox => {
+            const cardId = checkbox.getAttribute('data-id');
             const isSelected = selectedCards.includes(cardId);
-            const spanEl = btn.querySelector('span');
-            
-            btn.classList.toggle('active', isSelected);
-            
-            if (spanEl) {
-                spanEl.textContent = isSelected ? 'Remove' : 'Compare';
-            }
-            
-            // Update icon
-            const iconEl = btn.querySelector('svg');
-            if (iconEl) {
-                iconEl.outerHTML = isSelected 
-                    ? '<?php echo ccm_get_icon('minus', 'icon'); ?>'
-                    : '<?php echo ccm_get_icon('compare', 'icon'); ?>';
-            }
+            checkbox.checked = isSelected;
         });
         
         // Update comparison bar
         if (selectedCards.length > 0) {
-            comparisonBar.classList.add('active');
+            comparisonBar.style.transform = 'translateY(0)';
             selectedCountEl.textContent = selectedCards.length;
             compareNowBtn.disabled = selectedCards.length < 2;
+            compareNowBtn.style.opacity = selectedCards.length < 2 ? '0.5' : '1';
         } else {
-            comparisonBar.classList.remove('active');
+            comparisonBar.style.transform = 'translateY(100%)';
         }
     }
     
@@ -827,9 +701,8 @@ if (!function_exists('ccm_has_seo_plugin') || !ccm_has_seo_plugin()) {
     function initComparison() {
         loadSelectedCards();
         
-        compareButtons.forEach(btn => {
-            btn.addEventListener('click', function(e) {
-                e.preventDefault();
+        compareCheckboxes.forEach(checkbox => {
+            checkbox.addEventListener('change', function(e) {
                 const cardId = this.getAttribute('data-id');
                 toggleCardSelection(cardId);
             });
@@ -846,18 +719,16 @@ if (!function_exists('ccm_has_seo_plugin') || !ccm_has_seo_plugin()) {
         if (compareNowBtn) {
             compareNowBtn.addEventListener('click', function() {
                 if (selectedCards.length >= 2) {
-                    // Redirect to dedicated comparison page
-                    const compareUrl = `${window.location.origin}/compare-cards?cards=${selectedCards.join(',')}`;
+                    // Navigate to dedicated compare-card page
+                    const compareUrl = `${window.location.origin}/compare-card/?cards=${selectedCards.join(',')}`;
                     window.location.href = compareUrl;
                 }
             });
         }
     }
     
-    // Initialize comparison functionality if we're not in comparison mode
-    <?php if (!$compare_mode): ?>
+    // Initialize comparison functionality
     initComparison();
-    <?php endif; ?>
     
     // Add loading states for better UX
     document.addEventListener('DOMContentLoaded', function() {

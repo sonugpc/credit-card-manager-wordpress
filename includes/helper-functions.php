@@ -295,3 +295,152 @@ function ccm_log($message, $data = null) {
     
     error_log($log_message);
 }
+
+/**
+ * Generate dynamic FAQs based on card data
+ */
+function ccm_generate_dynamic_faqs($post_id) {
+    $card_title = get_the_title($post_id);
+    $bank_terms = get_the_terms($post_id, 'store');
+    $bank_name = (!is_wp_error($bank_terms) && !empty($bank_terms)) ? $bank_terms[0]->name : '';
+    
+    $annual_fee = ccm_get_meta($post_id, 'annual_fee', 0, true);
+    $joining_fee = ccm_get_meta($post_id, 'joining_fee', 0, true);
+    $welcome_bonus = ccm_get_meta($post_id, 'welcome_bonus', '');
+    $reward_type = ccm_get_meta($post_id, 'reward_type', '');
+    $reward_conversion_rate = ccm_get_meta($post_id, 'reward_conversion_rate', '');
+    $min_income = ccm_get_meta($post_id, 'min_income', '');
+    $processing_time = ccm_get_meta($post_id, 'processing_time', '');
+    $cashback_rate = ccm_get_meta($post_id, 'cashback_rate', '');
+    $apply_link = ccm_get_meta($post_id, 'apply_link', '');
+    
+    $dynamic_faqs = array();
+    
+    // Fee-related FAQ
+    if ($annual_fee > 0) {
+        $dynamic_faqs[] = array(
+            'question' => "What is the annual fee for {$card_title}?",
+            'answer' => "The annual fee for {$card_title} is ₹" . number_format($annual_fee) . ($joining_fee > 0 ? " with a joining fee of ₹" . number_format($joining_fee) : "") . ". Some cards may waive the annual fee based on spending criteria or for the first year."
+        );
+    } else {
+        $dynamic_faqs[] = array(
+            'question' => "Does {$card_title} have any annual fee?",
+            'answer' => "No, {$card_title} has no annual fee" . ($joining_fee > 0 ? ", but there is a joining fee of ₹" . number_format($joining_fee) : "") . ". This makes it a cost-effective option for cardholders."
+        );
+    }
+    
+    // Welcome bonus FAQ
+    if (!empty($welcome_bonus)) {
+        $dynamic_faqs[] = array(
+            'question' => "What welcome bonus do I get with {$card_title}?",
+            'answer' => "New {$card_title} cardholders can earn {$welcome_bonus}. This welcome offer is typically available for a limited time and subject to meeting minimum spending requirements."
+        );
+    }
+    
+    // Reward system FAQ
+    if (!empty($reward_type) && !empty($reward_conversion_rate)) {
+        $dynamic_faqs[] = array(
+            'question' => "How does the {$reward_type} system work with {$card_title}?",
+            'answer' => "{$card_title} offers {$reward_type} as rewards. The conversion rate is {$reward_conversion_rate}. " . (!empty($cashback_rate) ? "You can earn {$cashback_rate} on various categories." : "Earn rewards on every purchase and redeem them for maximum value.")
+        );
+    } elseif (!empty($cashback_rate)) {
+        $dynamic_faqs[] = array(
+            'question' => "What cashback rates does {$card_title} offer?",
+            'answer' => "{$card_title} offers {$cashback_rate}. The cashback rates may vary by category and spending patterns, providing excellent value for everyday purchases."
+        );
+    }
+    
+    // Eligibility FAQ
+    if (!empty($min_income)) {
+        $dynamic_faqs[] = array(
+            'question' => "What are the eligibility criteria for {$card_title}?",
+            'answer' => "To be eligible for {$card_title}, you need a minimum income of {$min_income}. Additional criteria may include age requirements, credit score, and employment status. Contact {$bank_name} for complete eligibility details."
+        );
+    }
+    
+    // Processing time FAQ
+    if (!empty($processing_time)) {
+        $dynamic_faqs[] = array(
+            'question' => "How long does it take to get {$card_title} approved?",
+            'answer' => "The typical processing time for {$card_title} is {$processing_time}. Processing times may vary based on document verification and credit assessment. You may receive instant approval for pre-approved applications."
+        );
+    }
+    
+    // Application FAQ
+    if (!empty($apply_link)) {
+        $dynamic_faqs[] = array(
+            'question' => "How can I apply for {$card_title}?",
+            'answer' => "You can apply for {$card_title} online through our secure application process. The application is quick and convenient, requiring basic personal and financial information. " . (!empty($bank_name) ? "You can also visit any {$bank_name} branch to apply in person." : "")
+        );
+    }
+    
+    // Bank-specific FAQ
+    if (!empty($bank_name)) {
+        $dynamic_faqs[] = array(
+            'question' => "Is {$card_title} from {$bank_name} a good choice?",
+            'answer' => "{$card_title} from {$bank_name} offers excellent features including " . (!empty($reward_type) ? "{$reward_type} rewards" : "cashback benefits") . ($annual_fee > 0 ? "" : ", no annual fee") . ", and comprehensive benefits. It's suitable for customers looking for " . (!empty($cashback_rate) ? "high cashback rates" : "reliable banking services") . " with {$bank_name}'s trusted service."
+        );
+    }
+    
+    return $dynamic_faqs;
+}
+
+/**
+ * Get combined FAQs (custom + dynamic) for a credit card
+ */
+function ccm_get_card_faqs($post_id) {
+    // Get custom FAQs from meta
+    $custom_faqs = ccm_get_meta($post_id, 'custom_faqs', array(), false, true);
+    
+    // Generate dynamic FAQs
+    $dynamic_faqs = ccm_generate_dynamic_faqs($post_id);
+    
+    // Combine custom and dynamic FAQs
+    $all_faqs = array();
+    
+    // Add custom FAQs first (they take priority)
+    if (!empty($custom_faqs) && is_array($custom_faqs)) {
+        foreach ($custom_faqs as $faq) {
+            if (!empty($faq['question']) && !empty($faq['answer'])) {
+                $all_faqs[] = $faq;
+            }
+        }
+    }
+    
+    // Add dynamic FAQs
+    if (!empty($dynamic_faqs)) {
+        $all_faqs = array_merge($all_faqs, $dynamic_faqs);
+    }
+    
+    return $all_faqs;
+}
+
+/**
+ * Generate FAQ schema markup for SEO
+ */
+function ccm_generate_faq_schema($faqs) {
+    if (empty($faqs)) {
+        return null;
+    }
+    
+    $schema = array(
+        '@context' => 'https://schema.org',
+        '@type' => 'FAQPage',
+        'mainEntity' => array()
+    );
+    
+    foreach ($faqs as $faq) {
+        if (!empty($faq['question']) && !empty($faq['answer'])) {
+            $schema['mainEntity'][] = array(
+                '@type' => 'Question',
+                'name' => $faq['question'],
+                'acceptedAnswer' => array(
+                    '@type' => 'Answer',
+                    'text' => $faq['answer']
+                )
+            );
+        }
+    }
+    
+    return !empty($schema['mainEntity']) ? $schema : null;
+}

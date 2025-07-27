@@ -105,7 +105,7 @@ function ccm_register_credit_card_shortcode($atts) {
         'title' => get_the_title($card_id),
         'permalink' => get_permalink($card_id),
         'excerpt' => get_the_excerpt($card_id),
-        'image_url' => get_post_meta($card_id, 'card_image_url', true) ?: (has_post_thumbnail($card_id) ? get_the_post_thumbnail_url($card_id, 'large') : ''),
+        'image_url' => has_post_thumbnail($card_id) ? get_the_post_thumbnail_url($card_id, 'large') : '',
         'rating' => get_post_meta($card_id, 'rating', true),
         'review_count' => get_post_meta($card_id, 'review_count', true),
         'annual_fee' => get_post_meta($card_id, 'annual_fee', true),
@@ -664,3 +664,385 @@ function ccm_register_credit_card_shortcode($atts) {
     return ob_get_clean();
 }
 add_shortcode('credit-card', 'ccm_register_credit_card_shortcode');
+
+/**
+ * Register the [credit_card_grid] shortcode.
+ *
+ * @param array $atts Shortcode attributes.
+ * @return string The shortcode output.
+ */
+function ccm_register_credit_card_grid_shortcode($atts) {
+    $atts = shortcode_atts(
+        [
+            'count' => '6',
+            'bank' => '',
+            'category' => '',
+            'network_type' => '',
+            'featured' => '',
+            'min_rating' => '',
+            'max_annual_fee' => '',
+            'sort_by' => 'rating',
+            'sort_order' => 'desc',
+            'show_filters' => 'yes',
+        ],
+        $atts,
+        'credit_card_grid'
+    );
+
+    // Build query args
+    $args = [
+        'post_type' => 'credit-card',
+        'posts_per_page' => intval($atts['count']),
+        'meta_query' => [],
+        'tax_query' => [],
+    ];
+
+    // Add filters based on shortcode attributes
+    if (!empty($atts['bank'])) {
+        $args['tax_query'][] = [
+            'taxonomy' => 'store',
+            'field' => 'slug',
+            'terms' => sanitize_text_field($atts['bank']),
+        ];
+    }
+
+    if (!empty($atts['category'])) {
+        $args['tax_query'][] = [
+            'taxonomy' => 'category',
+            'field' => 'slug',
+            'terms' => sanitize_text_field($atts['category']),
+        ];
+    }
+
+    if (!empty($atts['network_type'])) {
+        $args['tax_query'][] = [
+            'taxonomy' => 'network-type',
+            'field' => 'slug',
+            'terms' => sanitize_text_field($atts['network_type']),
+        ];
+    }
+
+    if (!empty($atts['min_rating'])) {
+        $args['meta_query'][] = [
+            'key' => 'rating',
+            'value' => floatval($atts['min_rating']),
+            'compare' => '>=',
+            'type' => 'DECIMAL',
+        ];
+    }
+
+    if (!empty($atts['max_annual_fee'])) {
+        $args['meta_query'][] = [
+            'key' => 'annual_fee_numeric',
+            'value' => intval($atts['max_annual_fee']),
+            'compare' => '<=',
+            'type' => 'NUMERIC',
+        ];
+    }
+
+    if ($atts['featured'] === '1') {
+        $args['meta_query'][] = [
+            'key' => 'featured',
+            'value' => '1',
+            'compare' => '=',
+        ];
+    }
+
+    // Set relations for queries
+    if (isset($args['meta_query']) && count($args['meta_query']) > 1) {
+        $args['meta_query']['relation'] = 'AND';
+    }
+
+    if (isset($args['tax_query']) && count($args['tax_query']) > 1) {
+        $args['tax_query']['relation'] = 'AND';
+    }
+
+    // Sorting
+    switch ($atts['sort_by']) {
+        case 'rating':
+            $args['meta_key'] = 'rating';
+            $args['orderby'] = 'meta_value_num';
+            $args['order'] = strtoupper($atts['sort_order']);
+            break;
+        case 'annual_fee':
+            $args['meta_key'] = 'annual_fee_numeric';
+            $args['orderby'] = 'meta_value_num';
+            $args['order'] = strtoupper($atts['sort_order']);
+            break;
+        case 'review_count':
+            $args['meta_key'] = 'review_count';
+            $args['orderby'] = 'meta_value_num';
+            $args['order'] = strtoupper($atts['sort_order']);
+            break;
+        default:
+            $args['orderby'] = 'date';
+            $args['order'] = strtoupper($atts['sort_order']);
+    }
+
+    // Query the cards
+    $credit_cards = new WP_Query($args);
+
+    // Generate unique ID for this shortcode instance
+    $shortcode_id = 'ccm-grid-' . uniqid();
+
+    ob_start();
+    ?>
+    <div class="ccm-shortcode-grid" id="<?php echo esc_attr($shortcode_id); ?>">
+        <?php if ($atts['show_filters'] === 'yes'): ?>
+        <!-- Simple Filters -->
+        <div class="ccm-filters" style="background: white; padding: 1rem; margin-bottom: 1rem; border: 1px solid #e5e7eb; border-radius: 8px;">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 0.75rem; margin-bottom: 0.75rem;">
+                <select class="ccm-filter" data-filter="bank" style="padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 6px;">
+                    <option value="">All Banks</option>
+                    <!-- Populated via JavaScript -->
+                </select>
+                <select class="ccm-filter" data-filter="category" style="padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 6px;">
+                    <option value="">All Categories</option>
+                    <!-- Populated via JavaScript -->
+                </select>
+                <select class="ccm-filter" data-filter="sort" style="padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 6px;">
+                    <option value="rating-desc">Highest Rated</option>
+                    <option value="rating-asc">Lowest Rated</option>
+                    <option value="annual_fee-asc">Lowest Fee</option>
+                    <option value="annual_fee-desc">Highest Fee</option>
+                </select>
+            </div>
+        </div>
+        <?php endif; ?>
+
+        <!-- Card Grid -->
+        <div class="ccm-cards-container" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem;">
+            <?php if ($credit_cards->have_posts()): ?>
+                <?php while ($credit_cards->have_posts()): $credit_cards->the_post(); 
+                    $post_id = get_the_ID();
+                    $card_image = has_post_thumbnail($post_id) ? get_the_post_thumbnail_url($post_id, 'medium') : '';
+                    
+                    $rating = ccm_get_meta($post_id, 'rating', 0, true);
+                    $review_count = ccm_get_meta($post_id, 'review_count', 0, true);
+                    $annual_fee = ccm_format_currency(ccm_get_meta($post_id, 'annual_fee', 'N/A'));
+                    $cashback_rate = ccm_get_meta($post_id, 'cashback_rate', 'N/A');
+                    $welcome_bonus = ccm_get_meta($post_id, 'welcome_bonus', 'N/A');
+                    $apply_link = ccm_get_meta($post_id, 'apply_link', get_permalink());
+                    $featured = (bool) ccm_get_meta($post_id, 'featured', false);
+                    
+                    $bank_terms = get_the_terms($post_id, 'store');
+                    $bank_name = !is_wp_error($bank_terms) && !empty($bank_terms) ? $bank_terms[0]->name : '';
+                    
+                    $pros = ccm_get_meta($post_id, 'pros', [], false, true);
+                ?>
+                <div class="ccm-card" style="background: white; border: 1px solid #e5e7eb; border-radius: 8px; padding: 1rem; text-align: center; position: relative;">
+                    <!-- Compare Checkbox -->
+                    <label class="ccm-btn-compare" data-id="<?php echo esc_attr($post_id); ?>" data-title="<?php echo esc_attr(get_the_title()); ?>" style="position: absolute; top: 0.5rem; right: 0.5rem; display: flex; align-items: center; gap: 0.25rem; cursor: pointer; font-size: 0.75rem; background: #f3f4f6; padding: 0.25rem 0.5rem; border-radius: 4px; border: 1px solid #d1d5db;">
+                        <input type="checkbox" style="margin: 0; width: 14px; height: 14px;">
+                        <span>Compare</span>
+                    </label>
+                    
+                    <?php if ($featured): ?>
+                        <div style="margin-bottom: 0.5rem;">
+                            <span style="background: #f59e0b; color: white; padding: 0.25rem 0.5rem; border-radius: 12px; font-size: 0.75rem;">
+                                ⭐ Featured
+                            </span>
+                        </div>
+                    <?php endif; ?>
+                    
+                    <?php if (!empty($card_image)): ?>
+                        <div style="margin-bottom: 0.75rem;">
+                            <img src="<?php echo esc_url($card_image); ?>" alt="<?php the_title(); ?>" style="width: 100px; height: auto; object-fit: contain;">
+                        </div>
+                    <?php endif; ?>
+                    
+                    <h3 style="margin: 0 0 0.5rem 0; font-size: 1rem; font-weight: 600;"><?php the_title(); ?></h3>
+                    
+                    <?php if (!empty($bank_name)): ?>
+                        <div style="color: #6b7280; font-size: 0.875rem; margin-bottom: 0.5rem;"><?php echo esc_html($bank_name); ?></div>
+                    <?php endif; ?>
+                    
+                    <?php if ($rating > 0): ?>
+                        <div style="margin-bottom: 0.75rem; color: #f59e0b;">
+                            <?php echo str_repeat('⭐', floor($rating)); ?>
+                            <span style="font-size: 0.75rem; color: #6b7280; margin-left: 0.25rem;">
+                                <?php echo esc_html($rating); ?>/5
+                            </span>
+                        </div>
+                    <?php endif; ?>
+                    
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-bottom: 1rem; font-size: 0.8rem;">
+                        <div style="padding: 0.5rem; background: #f9fafb; border-radius: 6px;">
+                            <div style="color: #6b7280; margin-bottom: 0.25rem;">Annual Fee</div>
+                            <div style="font-weight: 600;"><?php echo esc_html($annual_fee); ?></div>
+                        </div>
+                        <div style="padding: 0.5rem; background: #f9fafb; border-radius: 6px;">
+                            <div style="color: #6b7280; margin-bottom: 0.25rem;">Rewards</div>
+                            <div style="font-weight: 600;"><?php echo esc_html($cashback_rate); ?></div>
+                        </div>
+                    </div>
+                    
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+                        <a href="<?php the_permalink(); ?>" style="padding: 0.5rem; text-align: center; background: #f3f4f6; color: #374151; border-radius: 6px; text-decoration: none; font-size: 0.875rem;">
+                            Details
+                        </a>
+                        <a href="<?php echo esc_url($apply_link); ?>" target="_blank" rel="noopener" style="padding: 0.5rem; text-align: center; background: #3b82f6; color: white; border-radius: 6px; text-decoration: none; font-size: 0.875rem;">
+                            Apply
+                        </a>
+                    </div>
+                </div>
+                <?php endwhile; wp_reset_postdata(); ?>
+            <?php else: ?>
+                <div style="grid-column: 1 / -1; text-align: center; padding: 2rem; color: #6b7280;">
+                    <p>No credit cards found matching your criteria.</p>
+                </div>
+            <?php endif; ?>
+        </div>
+        
+        <!-- Comparison Bar for Shortcode -->
+        <div class="ccm-comparison-bar" id="<?php echo esc_attr($shortcode_id); ?>-comparison-bar" style="position: fixed; bottom: 0; left: 0; right: 0; background: #1f2937; color: white; padding: 0.75rem; z-index: 1000; transform: translateY(100%); transition: transform 0.3s ease;">
+            <div style="max-width: 1200px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between;">
+                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                    <span>⚖️</span>
+                    <div style="font-size: 0.875rem;">
+                        <span class="selected-count">0</span> cards selected
+                    </div>
+                </div>
+                <div style="display: flex; gap: 0.5rem;">
+                    <button type="button" class="clear-comparison" style="padding: 0.5rem 1rem; background: transparent; color: white; border: 1px solid #374151; border-radius: 4px; cursor: pointer; font-size: 0.875rem;">
+                        Clear
+                    </button>
+                    <button type="button" class="compare-now" disabled style="padding: 0.5rem 1rem; background: #3b82f6; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.875rem;">
+                        Compare
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <style>
+    #<?php echo esc_attr($shortcode_id); ?> .ccm-card:hover {
+        border-color: #d1d5db;
+    }
+    #<?php echo esc_attr($shortcode_id); ?> .ccm-btn-compare.active {
+        background: #3b82f6 !important;
+        color: white !important;
+        border-color: #3b82f6 !important;
+    }
+    </style>
+    <?php
+
+    wp_enqueue_style(
+        'credit-card-grid',
+        plugin_dir_url(__FILE__) . '../assets/frontend.css',
+        [],
+        CCM_VERSION
+    );
+
+    // Add JavaScript for comparison functionality
+    ?>
+    <script>
+    (function() {
+        const shortcodeId = '<?php echo esc_js($shortcode_id); ?>';
+        const container = document.getElementById(shortcodeId);
+        if (!container) return;
+        
+        const comparisonBar = document.getElementById(shortcodeId + '-comparison-bar');
+        const compareButtons = container.querySelectorAll('.ccm-btn-compare');
+        const clearBtn = comparisonBar.querySelector('.clear-comparison');
+        const compareNowBtn = comparisonBar.querySelector('.compare-now');
+        const selectedCountEl = comparisonBar.querySelector('.selected-count');
+        
+        let selectedCards = [];
+        const maxCompare = 3;
+        const storageKey = 'ccm_shortcode_compare_' + shortcodeId;
+        
+        // Load saved selections
+        function loadSelectedCards() {
+            const saved = localStorage.getItem(storageKey);
+            if (saved) {
+                try {
+                    selectedCards = JSON.parse(saved);
+                    updateUI();
+                } catch (e) {
+                    selectedCards = [];
+                }
+            }
+        }
+        
+        // Save selections
+        function saveSelectedCards() {
+            localStorage.setItem(storageKey, JSON.stringify(selectedCards));
+        }
+        
+        // Update UI
+        function updateUI() {
+            compareButtons.forEach(btn => {
+                const cardId = btn.getAttribute('data-id');
+                const checkbox = btn.querySelector('input[type="checkbox"]');
+                const isSelected = selectedCards.includes(cardId);
+                
+                checkbox.checked = isSelected;
+                btn.classList.toggle('active', isSelected);
+            });
+            
+            // Update comparison bar
+            if (selectedCards.length > 0) {
+                comparisonBar.style.transform = 'translateY(0)';
+                selectedCountEl.textContent = selectedCards.length;
+                compareNowBtn.disabled = selectedCards.length < 2;
+            } else {
+                comparisonBar.style.transform = 'translateY(100%)';
+            }
+        }
+        
+        // Toggle card selection
+        function toggleCardSelection(cardId) {
+            const index = selectedCards.indexOf(cardId);
+            
+            if (index > -1) {
+                selectedCards.splice(index, 1);
+            } else {
+                if (selectedCards.length < maxCompare) {
+                    selectedCards.push(cardId);
+                } else {
+                    alert(`You can only compare up to ${maxCompare} cards at once.`);
+                    return;
+                }
+            }
+            
+            saveSelectedCards();
+            updateUI();
+        }
+        
+        // Initialize
+        loadSelectedCards();
+        
+        // Add event listeners
+        compareButtons.forEach(btn => {
+            btn.addEventListener('click', function(e) {
+                e.preventDefault();
+                const cardId = this.getAttribute('data-id');
+                toggleCardSelection(cardId);
+            });
+        });
+        
+        if (clearBtn) {
+            clearBtn.addEventListener('click', function() {
+                selectedCards = [];
+                saveSelectedCards();
+                updateUI();
+            });
+        }
+        
+        if (compareNowBtn) {
+            compareNowBtn.addEventListener('click', function() {
+                if (selectedCards.length >= 2) {
+                    // Redirect to comparison page
+                    const compareUrl = window.location.origin + '/compare-cards?cards=' + selectedCards.join(',');
+                    window.location.href = compareUrl;
+                }
+            });
+        }
+    })();
+    </script>
+    <?php
+
+    return ob_get_clean();
+}
+add_shortcode('credit_card_grid', 'ccm_register_credit_card_grid_shortcode');

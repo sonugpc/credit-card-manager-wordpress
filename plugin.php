@@ -1,10 +1,10 @@
 <?php
 /**
  * Plugin Name: Credit Card Manager
- * Plugin URI: https://yoursite.com
+ * Plugin URI: https://bigtricks.com
  * Description: A comprehensive plugin to manage credit cards with advanced filtering and API support
  * Version: 1.0.0
- * Author: Your Name
+ * Author: Sonu
  * License: GPL v2 or later
  * Text Domain: credit-card-manager
  */

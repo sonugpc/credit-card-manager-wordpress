@@ -704,7 +704,6 @@ public function register_meta_fields() {
                 .ccm-remove-item { background: #dc3545; color: white; border: none; padding: 5px 10px; cursor: pointer; }
                 .ccm-add-item { background: #28a745; color: white; border: none; padding: 5px 15px; cursor: pointer; }
                 .ccm-checkbox-group { display: flex; align-items: center; gap: 10px; }
-                .ccm-image-upload { border: 1px solid #ddd; padding: 15px; background: white; }
                 .ccm-faq-item { border: 1px solid #e0e0e0; padding: 15px; margin-bottom: 15px; background: white; border-radius: 4px; }
                 .ccm-faq-item .ccm-field { margin-bottom: 10px; }
                 .ccm-faq-item textarea { width: 100%; max-width: 100%; min-height: 80px; resize: vertical; }
@@ -822,30 +821,6 @@ public function register_meta_fields() {
             <div class="ccm-field-group">
                 <h3><?php _e('Basic Information', 'credit-card-manager'); ?></h3>
                 
-                <!-- Card Image removed - using Featured Image instead -->
-                
-                <!-- <div class="ccm-field">
-                    <label for="bank_name"><?php _e('Bank/Issuer', 'credit-card-manager'); ?></label>
-                    <?php
-                    $selected_bank = wp_get_post_terms($post->ID, 'store', array('fields' => 'ids'));
-                    $selected_bank_id = !empty($selected_bank) ? $selected_bank[0] : '';
-                    
-                    $banks = get_terms(array(
-                        'taxonomy' => 'store',
-                        'hide_empty' => false,
-                    ));
-                    ?>
-                    <select id="bank_name" name="bank_name">
-                        <option value=""><?php _e('Select Bank/Issuer', 'credit-card-manager'); ?></option>
-                        <?php if (!empty($banks) && !is_wp_error($banks)): ?>
-                            <?php foreach ($banks as $bank): ?>
-                                <option value="<?php echo esc_attr($bank->term_id); ?>" <?php selected($selected_bank_id, $bank->term_id); ?>>
-                                    <?php echo esc_html($bank->name); ?>
-                                </option>
-                            <?php endforeach; ?>
-                        <?php endif; ?>
-                    </select>
-                </div> -->
                 
                 <div class="ccm-field">
                     <label for="rating"><?php _e('Rating (0-5)', 'credit-card-manager'); ?></label>
@@ -1787,7 +1762,7 @@ public function register_meta_fields() {
    /**
     * GET Filters API
     */
-   public function get_filters_api($request) {
+   public function get_filters_api() {
        $filters = array();
        
        // Get banks (store taxonomy)

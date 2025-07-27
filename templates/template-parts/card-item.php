@@ -41,13 +41,6 @@ if (empty($card_image) && has_post_thumbnail($post_id)) {
 ?>
 
 <article class="ccv2-card" data-id="<?php echo esc_attr($post_id); ?>">
-    <!-- Compare Button -->
-    <?php if ($show_compare): ?>
-        <button type="button" class="ccv2-btn-compare" data-id="<?php echo esc_attr($post_id); ?>">
-            <?php echo ccm_get_icon('compare', 'icon'); ?>
-            <span>Compare</span>
-        </button>
-    <?php endif; ?>
     
     <!-- Card Header -->
     <header class="ccv2-card-header">
@@ -76,7 +69,7 @@ if (empty($card_image) && has_post_thumbnail($post_id)) {
                 <img src="<?php echo esc_url($card_image); ?>" alt="<?php echo esc_attr(get_the_title($post_id)); ?>">
             <?php endif; ?>
         </div>
-        
+
         <!-- Card Title -->
         <h3 class="ccv2-card-title"><?php echo esc_html(get_the_title($post_id)); ?></h3>
         
@@ -132,6 +125,12 @@ if (empty($card_image) && has_post_thumbnail($post_id)) {
         
         <!-- Action Buttons -->
         <div class="ccv2-card-actions">
+            <?php if ($show_compare): ?>
+                <label class="cc-btn-compare" data-id="<?php echo esc_attr($post_id); ?>" data-title="<?php echo esc_attr(get_the_title()); ?>">
+                    <input type="checkbox">
+                    <span>Compare</span>
+                </label>
+            <?php endif; ?>
             <a href="<?php echo esc_url(get_permalink($post_id)); ?>" class="ccv2-btn ccv2-btn-details">
                 <?php echo ccm_get_icon('info', 'icon'); ?>
                 Details

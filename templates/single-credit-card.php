@@ -1137,20 +1137,6 @@ body {
             <h2 class="cc-section-title">Fees & Charges</h2>
             
             <div class="cc-data-table">
-                <div class="cc-table-row">
-                    <div class="cc-table-label">Joining Fee</div>
-                    <div class="cc-table-value <?php echo $joining_fee > 0 ? 'negative' : 'positive'; ?>">
-                        <?php echo esc_html(ccm_format_currency($joining_fee)); ?>
-                    </div>
-                </div>
-                
-                <div class="cc-table-row">
-                    <div class="cc-table-label">Annual Fee</div>
-                    <div class="cc-table-value <?php echo $annual_fee > 0 ? 'negative' : 'positive'; ?>">
-                        <?php echo esc_html(ccm_format_currency($annual_fee)); ?>
-                    </div>
-                </div>
-                
                 <?php if (!empty($fees)): ?>
                     <?php foreach ($fees as $fee): ?>
                         <div class="cc-table-row">
@@ -1158,6 +1144,20 @@ body {
                             <div class="cc-table-value negative"><?php echo esc_html($fee['amount'] ?? $fee); ?></div>
                         </div>
                     <?php endforeach; ?>
+                <?php else: ?>
+                    <div class="cc-table-row">
+                        <div class="cc-table-label">Joining Fee</div>
+                        <div class="cc-table-value <?php echo $joining_fee > 0 ? 'negative' : 'positive'; ?>">
+                            <?php echo esc_html(ccm_format_currency($joining_fee)); ?>
+                        </div>
+                    </div>
+                    
+                    <div class="cc-table-row">
+                        <div class="cc-table-label">Annual Fee</div>
+                        <div class="cc-table-value <?php echo $annual_fee > 0 ? 'negative' : 'positive'; ?>">
+                            <?php echo esc_html(ccm_format_currency($annual_fee)); ?>
+                        </div>
+                    </div>
                 <?php endif; ?>
             </div>
         </section>
@@ -1273,8 +1273,9 @@ document.addEventListener('DOMContentLoaded', function() {
     // Update active navigation on scroll
     window.addEventListener('scroll', function() {
         let current = '';
+        const stickyNavHeight = document.querySelector('.cc-nav-sticky').offsetHeight;
         sections.forEach(section => {
-            const sectionTop = section.offsetTop - 150;
+            const sectionTop = section.offsetTop - stickyNavHeight - 20;
             if (scrollY >= sectionTop) {
                 current = section.getAttribute('id');
             }

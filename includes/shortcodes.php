@@ -156,7 +156,7 @@ function ccm_register_credit_card_shortcode($atts) {
             
             <!-- Content body -->
             <div class="cc-card-content" style="display: flex; gap: 1.5rem; align-items: flex-start; position: relative;">
-                <div class="cc-card-image" style="flex-shrink: 0; width: 140px; height: auto; background: none; padding: 0;">
+                <div class="cc-card-image" style="flex-shrink: 0; width: 140px; height: auto; background: none; padding: 0; text-align: center;">
                     <?php if ($card_data['image_url']): ?>
                         <img src="<?php echo esc_url($card_data['image_url']); ?>" 
                              alt="<?php echo esc_attr($card_data['title']); ?>" 
@@ -167,6 +167,13 @@ function ccm_register_credit_card_shortcode($atts) {
                             <small style="font-size: 0.8em;">No Image</small>
                         </div>
                     <?php endif; ?>
+                     <label class="cc-btn-compare" 
+                           data-id="<?php echo esc_attr($card_data['id']); ?>"
+                           data-title="<?php echo esc_attr($card_data['title']); ?>"
+                           style="display: inline-flex; align-items: center; justify-content: center; gap: 0.25rem; padding: 0.375rem 0.5rem; background: var(--cc-gray-50); border: 1px solid var(--cc-gray-200); border-radius: 6px; cursor: pointer; font-size: 0.75rem; font-weight: 500; margin-top: 0.5rem;">
+                        <input type="checkbox" style="margin: 0; width: 12px; height: 12px; accent-color: var(--cc-blue-600);">
+                        <span>Compare</span>
+                    </label>
                 </div>
                 
                 <div style="flex: 1; min-width: 0;">
@@ -208,20 +215,13 @@ function ccm_register_credit_card_shortcode($atts) {
                     </div>
                 </div>
 
-                <div style="position: absolute; top: 0; right: 0; display: flex; gap: 0.5rem; align-items: center;">
-                    <label class="cc-btn-compare" 
-                           data-id="<?php echo esc_attr($card_data['id']); ?>"
-                           data-title="<?php echo esc_attr($card_data['title']); ?>"
-                           style="display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.5rem; background: var(--cc-white); color: var(--cc-gray-700); border: 1px solid var(--cc-gray-300); border-radius: var(--cc-radius-sm); cursor: pointer; font-size: 0.75rem;">
-                        <input type="checkbox" style="margin: 0; width: 14px; height: 14px;">
-                        <span>Compare</span>
-                    </label>
+                <div style="position: absolute; top: 8px; right: 8px; display: flex; flex-direction: column; gap: 0.5rem; align-items: flex-end; z-index: 10;">
                     <?php if ($card_data['apply_link']): ?>
                     <a href="<?php echo esc_url($card_data['apply_link']); ?>" 
                        class="cc-btn cc-btn-apply" 
                        target="_blank" 
                        rel="noopener"
-                       style="display: inline-flex; align-items: center; gap: 0.5rem;">
+                       style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.5rem 1rem; background: var(--cc-blue-600); color: white; border: none; border-radius: 6px; text-decoration: none; font-size: 0.875rem; font-weight: 600; box-shadow: 0 2px 4px rgba(37, 99, 235, 0.2); transition: all 0.2s;">
                         Apply Now <span style="font-size: 0.8em;">✈</span>
                     </a>
                     <?php endif; ?>
@@ -246,7 +246,7 @@ function ccm_register_credit_card_shortcode($atts) {
             
             <!-- Content body with image and details -->
             <div class="cc-card-content" style="display: grid; grid-template-columns: auto 1fr auto; gap: 1.5rem; align-items: start;">
-                <div class="cc-card-image" style="width: 140px; height: auto; background: none; padding: 0;">
+                <div class="cc-card-image" style="width: 140px; height: auto; background: none; padding: 0; text-align: center;">
                     <?php if ($card_data['image_url']): ?>
                         <img src="<?php echo esc_url($card_data['image_url']); ?>" 
                              alt="<?php echo esc_attr($card_data['title']); ?>" 
@@ -257,6 +257,13 @@ function ccm_register_credit_card_shortcode($atts) {
                             <small style="font-size: 0.8em;">No Image</small>
                         </div>
                     <?php endif; ?>
+                    <label class="cc-btn-compare" 
+                           data-id="<?php echo esc_attr($card_data['id']); ?>"
+                           data-title="<?php echo esc_attr($card_data['title']); ?>"
+                           style="display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; padding: 0.5rem 0.75rem; background: var(--cc-gray-50); border: 1px solid var(--cc-gray-200); border-radius: var(--cc-radius); cursor: pointer; font-size: 0.875rem; margin-top: 0.5rem;">
+                        <input type="checkbox" style="margin: 0; width: 16px; height: 16px;">
+                        <span>Compare</span>
+                    </label>
                 </div>
 
                 <div style="display: grid; gap: 1rem; min-width: 300px;">
@@ -297,13 +304,6 @@ function ccm_register_credit_card_shortcode($atts) {
                 </div>
 
                 <div style="display: flex; gap: 0.75rem; align-items: center;">
-                    <label class="cc-btn-compare" 
-                           data-id="<?php echo esc_attr($card_data['id']); ?>"
-                           data-title="<?php echo esc_attr($card_data['title']); ?>"
-                           style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.5rem 0.75rem; background: var(--cc-white); color: var(--cc-gray-700); border: 1px solid var(--cc-gray-300); border-radius: var(--cc-radius); cursor: pointer; font-size: 0.875rem;">
-                        <input type="checkbox" style="margin: 0; width: 16px; height: 16px;">
-                        <span>Compare</span>
-                    </label>
                     <?php if ($card_data['apply_link']): ?>
                     <a href="<?php echo esc_url($card_data['apply_link']); ?>" 
                        class="cc-btn cc-btn-apply" 
@@ -832,10 +832,6 @@ function ccm_register_credit_card_grid_shortcode($atts) {
                 ?>
                 <div class="ccm-card" style="background: white; border: 1px solid #e5e7eb; border-radius: 8px; padding: 1rem; text-align: center; position: relative;">
                     <!-- Compare Checkbox -->
-                    <label class="ccm-btn-compare" data-id="<?php echo esc_attr($post_id); ?>" data-title="<?php echo esc_attr(get_the_title()); ?>" style="position: absolute; top: 0.5rem; right: 0.5rem; display: flex; align-items: center; gap: 0.25rem; cursor: pointer; font-size: 0.75rem; background: #f3f4f6; padding: 0.25rem 0.5rem; border-radius: 4px; border: 1px solid #d1d5db;">
-                        <input type="checkbox" style="margin: 0; width: 14px; height: 14px;">
-                        <span>Compare</span>
-                    </label>
                     
                     <?php if ($featured): ?>
                         <div style="margin-bottom: 0.5rem;">
@@ -850,6 +846,11 @@ function ccm_register_credit_card_grid_shortcode($atts) {
                             <img src="<?php echo esc_url($card_image); ?>" alt="<?php the_title(); ?>" style="width: 100px; height: auto; object-fit: contain;">
                         </div>
                     <?php endif; ?>
+                    
+                    <label class="ccm-btn-compare" data-id="<?php echo esc_attr($post_id); ?>" data-title="<?php echo esc_attr(get_the_title()); ?>" style="display: inline-flex; align-items: center; justify-content: center; gap: 0.25rem; cursor: pointer; font-size: 0.75rem; background: #f3f4f6; padding: 0.25rem 0.5rem; border-radius: 4px; border: 1px solid #d1d5db; margin-bottom: 0.75rem;">
+                        <input type="checkbox" style="margin: 0; width: 14px; height: 14px;">
+                        <span>Compare</span>
+                    </label>
                     
                     <h3 style="margin: 0 0 0.5rem 0; font-size: 1rem; font-weight: 600;"><?php the_title(); ?></h3>
                     

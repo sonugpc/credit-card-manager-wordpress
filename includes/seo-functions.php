@@ -138,13 +138,23 @@ function ccm_generate_product_schema($post_id) {
             'priceValidUntil' => date('Y-12-31'),
             'availability' => 'https://schema.org/InStock'
         ];
-        
-        if ($bank_name) {
-            $schema['offers']['seller'] = [
-                '@type' => 'Organization',
-                'name' => $bank_name
-            ];
-        }
+    }
+    
+    if ($rating > 0) {
+        $schema['review'] = [
+            '@type' => 'Review',
+            'reviewRating' => [
+                '@type' => 'Rating',
+                'ratingValue' => $rating,
+                'bestRating' => '5',
+                'worstRating' => '1'
+            ],
+            'author' => [
+                '@type' => 'Person',
+                'name' => get_the_author()
+            ],
+            'reviewBody' => wp_strip_all_tags(get_the_excerpt($post_id))
+        ];
     }
     
     $additional_properties = [];
@@ -343,34 +353,23 @@ function ccm_output_single_seo($post_id) {
     echo '<meta property="article:tag" content="' . esc_attr($card_title . ', ' . $bank_name . ', Credit Card') . '">' . "\n";
     
     // Output schemas
-    ccm_output_schema(ccm_generate_product_schema($post_id));
+    $schemas = array();
+    $schemas[] = ccm_generate_product_schema($post_id);
     
     $breadcrumbs = [
         ['name' => 'Home', 'url' => home_url()],
         ['name' => 'Credit Cards', 'url' => get_post_type_archive_link('credit-card')],
         ['name' => get_the_title($post_id), 'url' => $canonical_url]
     ];
-    ccm_output_schema(ccm_generate_breadcrumb_schema($breadcrumbs));
+    $schemas[] = ccm_generate_breadcrumb_schema($breadcrumbs);
+
+    $faq_schema = ccm_generate_faq_schema(ccm_get_card_faqs($post_id));
+    if($faq_schema) {
+        $schemas[] = $faq_schema;
+    }
+
+    ccm_output_schema($schemas);
     
-    // Financial Product Schema
-    $financial_schema = [
-        '@context' => 'https://schema.org',
-        '@type' => 'FinancialProduct',
-        'name' => get_the_title($post_id),
-        'description' => $description,
-        'provider' => [
-            '@type' => 'FinancialService',
-            'name' => $bank_name
-        ],
-        'feesAndCommissionsSpecification' => 'Annual Fee: ₹' . number_format(ccm_get_meta($post_id, 'annual_fee', 0, true)) . ', Joining Fee: ₹' . number_format(ccm_get_meta($post_id, 'joining_fee', 0, true)),
-        'interestRate' => ccm_get_meta($post_id, 'interest_rate', 'Varies'),
-        'amount' => [
-            '@type' => 'MonetaryAmount',
-            'currency' => 'INR',
-            'value' => ccm_get_meta($post_id, 'annual_fee', 0, true)
-        ]
-    ];
-    ccm_output_schema($financial_schema);
 }
 
 /**
@@ -521,6 +520,8 @@ function ccm_add_credit_card_schema_to_head() {
     }
     
     // Output our specialized credit card schemas
+    $schemas = array();
+
     $financial_schema = [
         '@context' => 'https://schema.org',
         '@type' => 'FinancialProduct',
@@ -545,7 +546,14 @@ function ccm_add_credit_card_schema_to_head() {
         $financial_schema['provider']['name'] = $bank_terms[0]->name;
     }
     
-    ccm_output_schema($financial_schema);
+    $schemas[] = $financial_schema;
+
+    $faq_schema = ccm_generate_faq_schema(ccm_get_card_faqs($post_id));
+    if($faq_schema) {
+        $schemas[] = $faq_schema;
+    }
+
+    ccm_output_schema($schemas);
 }
 
 // Initialize RankMath integration on plugins_loaded to ensure RankMath is available

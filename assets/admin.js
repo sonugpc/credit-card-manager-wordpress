@@ -56,6 +56,23 @@ function removeFaqItem(button) {
     }
 }
 
+function addFeatureItem() {
+    const container = document.getElementById('features-field');
+    const existingItems = container.querySelectorAll('.ccm-feature-item-editor');
+    const newIndex = existingItems.length;
+
+    const newItem = document.createElement('div');
+    newItem.className = 'ccm-feature-item-editor';
+    newItem.innerHTML = `
+        <input type="text" name="features[${newIndex}][title]" value="" placeholder="Feature Title" />
+        <textarea name="features[${newIndex}][description]" placeholder="Feature Description"></textarea>
+        <button type="button" class="ccm-remove-item" onclick="removeArrayItem(this.parentElement)">Remove</button>
+    `;
+
+    const addButton = container.querySelector('.ccm-add-item');
+    container.insertBefore(newItem, addButton);
+}
+
 // JSON Import/Export Functions
 function showStatus(message, type) {
     const status = document.getElementById('ccm-json-status');
@@ -132,6 +149,30 @@ function setFaqField(faqs) {
     }
 }
 
+function setFeatureField(features) {
+    const container = document.getElementById('features-field');
+    if (!container || !Array.isArray(features)) return;
+
+    const existingItems = container.querySelectorAll('.ccm-feature-item-editor');
+    existingItems.forEach(item => item.remove());
+
+    features.forEach((feature, index) => {
+        addFeatureItem();
+        const featureItems = container.querySelectorAll('.ccm-feature-item-editor');
+        const currentItem = featureItems[index];
+        if (currentItem) {
+            const titleInput = currentItem.querySelector('input[type="text"]');
+            const descriptionTextarea = currentItem.querySelector('textarea');
+            if (titleInput) titleInput.value = feature.title || '';
+            if (descriptionTextarea) descriptionTextarea.value = feature.description || '';
+        }
+    });
+
+    if (features.length === 0) {
+        addFeatureItem();
+    }
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     if(document.getElementById('ccm-import-json')) {
         document.getElementById('ccm-import-json').addEventListener('click', function() {
@@ -186,6 +227,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     if (data.lists.cons) { setArrayField('cons-field', data.lists.cons, 'cons[]'); importedFields++; }
                     if (data.lists.best_for) { setArrayField('best_for-field', data.lists.best_for, 'best_for[]'); importedFields++; }
                     if (data.lists.documents) { setArrayField('documents-field', data.lists.documents, 'documents[]'); importedFields++; }
+                    if (data.lists.features) { setFeatureField(data.lists.features); importedFields++; }
                 }
                 
                 // Import custom FAQs
@@ -238,7 +280,12 @@ document.addEventListener('DOMContentLoaded', function() {
                         pros: Array.from(document.querySelectorAll('input[name="pros[]"]')).map(input => input.value).filter(v => v),
                         cons: Array.from(document.querySelectorAll('input[name="cons[]"]')).map(input => input.value).filter(v => v),
                         best_for: Array.from(document.querySelectorAll('input[name="best_for[]"]')).map(input => input.value).filter(v => v),
-                        documents: Array.from(document.querySelectorAll('input[name="documents[]"]')).map(input => input.value).filter(v => v)
+                        documents: Array.from(document.querySelectorAll('input[name="documents[]"]')).map(input => input.value).filter(v => v),
+                        features: Array.from(document.querySelectorAll('.ccm-feature-item-editor')).map(item => {
+                            const title = item.querySelector('input[type="text"]')?.value || '';
+                            const description = item.querySelector('textarea')?.value || '';
+                            return { title, description };
+                        }).filter(feature => feature.title)
                     },
                     custom_faqs: Array.from(document.querySelectorAll('.ccm-faq-item')).map(item => {
                         const question = item.querySelector('input[type="text"]')?.value || '';

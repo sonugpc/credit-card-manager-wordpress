@@ -10,6 +10,7 @@
     initFilterToggle();
     initSortingFeature();
     initFilterReset();
+    initStickyNav();
   });
 
   /**
@@ -210,5 +211,23 @@
         window.location.href = url.toString();
       });
     }
+  }
+
+  /**
+   * Initialize sticky navigation on single credit card page
+   */
+  function initStickyNav() {
+    const stickyNav = document.querySelector('.cc-nav-sticky');
+    if (!stickyNav) {
+      return;
+    }
+
+    let headerHeight = 0;
+    const themeHeader = document.querySelector('#masthead') || document.querySelector('.site-header') || document.querySelector('header[role="banner"]');
+    if (themeHeader) {
+      headerHeight = themeHeader.offsetHeight;
+    }
+
+    stickyNav.style.top = `${headerHeight}px`;
   }
 })(jQuery);

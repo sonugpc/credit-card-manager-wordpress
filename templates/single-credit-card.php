@@ -810,95 +810,98 @@ body {
 }
 </style>
 
-<div class="cc-single-wrapper">
-    <!-- Hero Section -->
-    <section class="cc-hero">
-        <div class="cc-hero-content">
-            <div class="cc-hero-header">
-                <?php if ($card_image): ?>
-                    <img src="<?php echo esc_url($card_image); ?>" alt="<?php echo esc_attr($card_name); ?>" class="cc-card-image">
-                <?php endif; ?>
-                
-                <div class="cc-hero-title">
-                    <h1><?php echo esc_html($card_name); ?></h1>
-                    <?php if ($bank_name): ?>
-                        <p class="cc-bank-name">by <?php echo esc_html($bank_name); ?></p>
-                    <?php endif; ?>
-                    
-                    <div class="cc-hero-badges">
-                        <?php if ($rating > 0): ?>
-                            <div class="cc-badge rating">
-                                ⭐ <?php echo esc_html($rating); ?>/5 (<?php echo esc_html($review_count); ?> reviews)
+<div id="primary" class="content-area">
+    <main id="main" class="site-main" role="main">
+        <?php while (have_posts()) : the_post(); ?>
+            <article id="post-<?php the_ID(); ?>" <?php post_class('cc-single-wrapper'); ?>>
+                <!-- Hero Section -->
+                <header class="entry-header cc-hero">
+                    <div class="cc-hero-content">
+                        <div class="cc-hero-header">
+                            <?php if ($card_image): ?>
+                                <img src="<?php echo esc_url($card_image); ?>" alt="<?php echo esc_attr($card_name); ?>" class="cc-card-image">
+                            <?php endif; ?>
+                            
+                            <div class="cc-hero-title">
+                                <?php the_title('<h1 class="entry-title">', '</h1>'); ?>
+                                <?php if ($bank_name): ?>
+                                    <p class="cc-bank-name">by <?php echo esc_html($bank_name); ?></p>
+                                <?php endif; ?>
+                                
+                                <div class="cc-hero-badges">
+                                    <?php if ($rating > 0): ?>
+                                        <div class="cc-badge rating">
+                                            ⭐ <?php echo esc_html($rating); ?>/5 (<?php echo esc_html($review_count); ?> reviews)
+                                        </div>
+                                    <?php endif; ?>
+                                    
+                                    <?php if ($featured): ?>
+                                        <div class="cc-badge featured">
+                                            🏆 Featured
+                                        </div>
+                                    <?php endif; ?>
+                                    
+                                    <?php if ($trending): ?>
+                                        <div class="cc-badge trending">
+                                            🔥 Trending
+                                        </div>
+                                    <?php endif; ?>
+                                    
+                                    <?php if ($category_name): ?>
+                                        <div class="cc-badge">
+                                            <?php echo esc_html($category_name); ?>
+                                        </div>
+                                    <?php endif; ?>
+                                </div>
                             </div>
-                        <?php endif; ?>
+                        </div>
                         
-                        <?php if ($featured): ?>
-                            <div class="cc-badge featured">
-                                🏆 Featured
+                        <div class="cc-key-highlights">
+                            <div class="cc-highlight-card">
+                                <div class="cc-highlight-label">Annual Fee</div>
+                                <div class="cc-highlight-value"><?php echo esc_html(ccm_format_currency($annual_fee)); ?></div>
                             </div>
-                        <?php endif; ?>
-                        
-                        <?php if ($trending): ?>
-                            <div class="cc-badge trending">
-                                🔥 Trending
+                            
+                            <div class="cc-highlight-card">
+                                <div class="cc-highlight-label">Reward Rate</div>
+                                <div class="cc-highlight-value"><?php echo esc_html($cashback_rate); ?></div>
                             </div>
-                        <?php endif; ?>
-                        
-                        <?php if ($category_name): ?>
-                            <div class="cc-badge">
-                                <?php echo esc_html($category_name); ?>
+                            
+                            <div class="cc-highlight-card">
+                                <div class="cc-highlight-label">Welcome Bonus</div>
+                                <div class="cc-highlight-value"><?php echo esc_html($welcome_bonus); ?></div>
                             </div>
-                        <?php endif; ?>
+                            
+                            <div class="cc-highlight-card">
+                                <div class="cc-highlight-label">Credit Limit</div>
+                                <div class="cc-highlight-value"><?php echo esc_html($credit_limit); ?></div>
+                            </div>
+                        </div>
                     </div>
-                </div>
-            </div>
-            
-            <div class="cc-key-highlights">
-                <div class="cc-highlight-card">
-                    <div class="cc-highlight-label">Annual Fee</div>
-                    <div class="cc-highlight-value"><?php echo esc_html(ccm_format_currency($annual_fee)); ?></div>
-                </div>
+                </header>
                 
-                <div class="cc-highlight-card">
-                    <div class="cc-highlight-label">Reward Rate</div>
-                    <div class="cc-highlight-value"><?php echo esc_html($cashback_rate); ?></div>
-                </div>
+                <!-- Sticky Navigation -->
+                <nav class="cc-nav-sticky">
+                    <div class="cc-nav-container">
+                        <div class="cc-nav-links">
+                            <a href="#overview" class="cc-nav-link active">Overview</a>
+                            <?php if (get_the_content()): ?>
+                            <a href="#content" class="cc-nav-link">About</a>
+                            <?php endif; ?>
+                            <a href="#features" class="cc-nav-link">Features</a>
+                            <a href="#rewards" class="cc-nav-link">Rewards</a>
+                            <a href="#fees" class="cc-nav-link">Fees</a>
+                            <a href="#eligibility" class="cc-nav-link">Eligibility</a>
+                            <a href="#faq" class="cc-nav-link">FAQ</a>
+                        </div>
+                        <a href="<?php echo $apply_link; ?>" target="_blank" rel="noopener" class="cc-apply-btn">
+                            Apply Now
+                        </a>
+                    </div>
+                </nav>
                 
-                <div class="cc-highlight-card">
-                    <div class="cc-highlight-label">Welcome Bonus</div>
-                    <div class="cc-highlight-value"><?php echo esc_html($welcome_bonus); ?></div>
-                </div>
-                
-                <div class="cc-highlight-card">
-                    <div class="cc-highlight-label">Credit Limit</div>
-                    <div class="cc-highlight-value"><?php echo esc_html($credit_limit); ?></div>
-                </div>
-            </div>
-        </div>
-    </section>
-    
-    <!-- Sticky Navigation -->
-    <nav class="cc-nav-sticky">
-        <div class="cc-nav-container">
-            <div class="cc-nav-links">
-                <a href="#overview" class="cc-nav-link active">Overview</a>
-                <?php if (get_the_content()): ?>
-                <a href="#content" class="cc-nav-link">About</a>
-                <?php endif; ?>
-                <a href="#features" class="cc-nav-link">Features</a>
-                <a href="#rewards" class="cc-nav-link">Rewards</a>
-                <a href="#fees" class="cc-nav-link">Fees</a>
-                <a href="#eligibility" class="cc-nav-link">Eligibility</a>
-                <a href="#faq" class="cc-nav-link">FAQ</a>
-            </div>
-            <a href="<?php echo $apply_link; ?>" target="_blank" rel="noopener" class="cc-apply-btn">
-                Apply Now
-            </a>
-        </div>
-    </nav>
-    
-    <!-- Main Content -->
-    <main class="cc-content">
+                <!-- Main Content -->
+                <div class="entry-content cc-content">
         <!-- Overview Section -->
         <section id="overview" class="cc-section">
             <h2 class="cc-section-title">Quick Overview</h2>
@@ -947,35 +950,38 @@ body {
             
             <!-- Pros and Cons -->
             <?php if (!empty($pros) || !empty($cons)): ?>
-            <div class="cc-pros-cons">
-                <?php if (!empty($pros)): ?>
-                <div class="cc-pros">
-                    <h3>✅ Pros</h3>
-                    <ul class="cc-list">
-                        <?php foreach ($pros as $pro): ?>
-                            <li>
-                                <span class="icon">✓</span>
-                                <span><?php echo esc_html($pro); ?></span>
-                            </li>
-                        <?php endforeach; ?>
-                    </ul>
+            <section id="pros-cons" class="cc-section">
+                <h2 class="cc-section-title">Pros & Cons</h2>
+                <div class="cc-pros-cons">
+                    <?php if (!empty($pros)): ?>
+                    <div class="cc-pros">
+                        <h3>✅ Pros</h3>
+                        <ul class="cc-list">
+                            <?php foreach ($pros as $pro): ?>
+                                <li>
+                                    <span class="icon">✓</span>
+                                    <span><?php echo esc_html($pro); ?></span>
+                                </li>
+                            <?php endforeach; ?>
+                        </ul>
+                    </div>
+                    <?php endif; ?>
+                    
+                    <?php if (!empty($cons)): ?>
+                    <div class="cc-cons">
+                        <h3>❌ Cons</h3>
+                        <ul class="cc-list">
+                            <?php foreach ($cons as $con): ?>
+                                <li>
+                                    <span class="icon">✗</span>
+                                    <span><?php echo esc_html($con); ?></span>
+                                </li>
+                            <?php endforeach; ?>
+                        </ul>
+                    </div>
+                    <?php endif; ?>
                 </div>
-                <?php endif; ?>
-                
-                <?php if (!empty($cons)): ?>
-                <div class="cc-cons">
-                    <h3>❌ Cons</h3>
-                    <ul class="cc-list">
-                        <?php foreach ($cons as $con): ?>
-                            <li>
-                                <span class="icon">✗</span>
-                                <span><?php echo esc_html($con); ?></span>
-                            </li>
-                        <?php endforeach; ?>
-                    </ul>
-                </div>
-                <?php endif; ?>
-            </div>
+            </section>
             <?php endif; ?>
             
             <!-- Best For -->
@@ -1008,29 +1014,28 @@ body {
         <?php endif; ?>
         
         <!-- Features Section -->
+        <?php if (!empty($features)): ?>
         <section id="features" class="cc-section">
             <h2 class="cc-section-title">Key Features</h2>
             
-            <?php if (!empty($features)): ?>
-                <ul class="cc-features-list">
-                    <?php foreach ($features as $feature): ?>
-                        <li class="cc-feature-item">
-                            <div class="cc-feature-icon">🎁</div>
-                            <div class="cc-feature-content">
-                                <h4><?php echo esc_html($feature['title'] ?? $feature); ?></h4>
-                                <?php if (isset($feature['description'])): ?>
-                                    <p><?php echo esc_html($feature['description']); ?></p>
-                                <?php endif; ?>
-                            </div>
-                        </li>
-                    <?php endforeach; ?>
-                </ul>
-            <?php else: ?>
-                <p>Detailed features information will be updated soon. Please check with the bank for complete feature list.</p>
-            <?php endif; ?>
+            <ul class="cc-features-list">
+                <?php foreach ($features as $feature): ?>
+                    <li class="cc-feature-item">
+                        <div class="cc-feature-icon">🎁</div>
+                        <div class="cc-feature-content">
+                            <h4><?php echo esc_html($feature['title'] ?? $feature); ?></h4>
+                            <?php if (isset($feature['description'])): ?>
+                                <p><?php echo esc_html($feature['description']); ?></p>
+                            <?php endif; ?>
+                        </div>
+                    </li>
+                <?php endforeach; ?>
+            </ul>
         </section>
+        <?php endif; ?>
         
         <!-- Rewards Section -->
+        <?php if (!empty($rewards) || !empty($cashback_rate) || !empty($welcome_bonus)): ?>
         <section id="rewards" class="cc-section">
             <h2 class="cc-section-title">Reward Program</h2>
             
@@ -1106,8 +1111,10 @@ body {
                 </div>
             <?php endif; ?>
         </section>
+        <?php endif; ?>
         
         <!-- Fees Section -->
+        <?php if (!empty($fees) || $annual_fee > 0 || $joining_fee > 0): ?>
         <section id="fees" class="cc-section">
             <h2 class="cc-section-title">Fees & Charges</h2>
             
@@ -1136,8 +1143,10 @@ body {
                 <?php endif; ?>
             </div>
         </section>
+        <?php endif; ?>
         
         <!-- Eligibility Section -->
+        <?php if (!empty($eligibility) || !empty($documents)): ?>
         <section id="eligibility" class="cc-section">
             <h2 class="cc-section-title">Eligibility Criteria</h2>
             
@@ -1179,38 +1188,28 @@ body {
             </div>
             <?php endif; ?>
         </section>
+        <?php endif; ?>
         
         <!-- FAQ Section -->
+        <?php 
+        $card_faqs = ccm_get_card_faqs(get_the_ID());
+        if (!empty($card_faqs)): ?>
         <section id="faq" class="cc-section">
             <h2 class="cc-section-title">Frequently Asked Questions</h2>
             
-            <?php 
-            $card_faqs = ccm_get_card_faqs(get_the_ID());
-            if (!empty($card_faqs)): ?>
-                <?php foreach ($card_faqs as $index => $faq): ?>
-                    <div class="cc-faq-item">
-                        <div class="cc-faq-question">
-                            <?php echo esc_html($faq['question']); ?>
-                            <span>+</span>
-                        </div>
-                        <div class="cc-faq-answer">
-                            <?php echo wp_kses_post($faq['answer']); ?>
-                        </div>
-                    </div>
-                <?php endforeach; ?>
-            <?php else: ?>
-                <!-- Fallback FAQ -->
+            <?php foreach ($card_faqs as $index => $faq): ?>
                 <div class="cc-faq-item">
                     <div class="cc-faq-question">
-                        How long does it take to get approved?
+                        <?php echo esc_html($faq['question']); ?>
                         <span>+</span>
                     </div>
                     <div class="cc-faq-answer">
-                        Typically, the approval process takes <?php echo esc_html($processing_time); ?>. In some cases, instant approval is available for eligible applicants.
+                        <?php echo wp_kses_post($faq['answer']); ?>
                     </div>
                 </div>
-            <?php endif; ?>
+            <?php endforeach; ?>
         </section>
+        <?php endif; ?>
         
         <!-- Bottom CTA -->
         <section class="cc-bottom-cta">
@@ -1220,7 +1219,13 @@ body {
                 Apply Now - Get Instant Approval ⚡
             </a>
         </section>
-    </main>
+    </div>
+    <footer class="entry-footer">
+        <?php edit_post_link('Edit', '<span class="edit-link">', '</span>'); ?>
+    </footer>
+</article>
+<?php endwhile; ?>
+</main>
 </div>
 
 <script>

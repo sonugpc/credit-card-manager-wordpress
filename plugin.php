@@ -689,6 +689,7 @@ public function register_meta_fields() {
         $cons = get_post_meta($post->ID, 'cons', true) ?: array();
         $best_for = get_post_meta($post->ID, 'best_for', true) ?: array();
         $documents = get_post_meta($post->ID, 'documents', true) ?: array();
+        $features = get_post_meta($post->ID, 'features', true) ?: array();
         
         ?>
         <div class="credit-card-meta-container">
@@ -746,6 +747,16 @@ public function register_meta_fields() {
       "Aadhaar Card",
       "Salary slips (last 3 months)",
       "Bank statements (last 6 months)"
+    ],
+    "features": [
+      {
+        "title": "Lounge Access",
+        "description": "Complimentary access to domestic and international airport lounges."
+      },
+      {
+        "title": "Travel Insurance",
+        "description": "Comprehensive travel insurance coverage for trips booked with the card."
+      }
     ]
   },
   "custom_faqs": [
@@ -1001,6 +1012,28 @@ public function register_meta_fields() {
                    <button type="button" class="ccm-add-item" onclick="addArrayItem('documents-field', 'documents[]', 'Enter required document')"><?php _e('Add Document', 'credit-card-manager'); ?></button>
                </div>
            </div>
+
+           <div class="ccm-field-group">
+                <h3><?php _e('Key Features', 'credit-card-manager'); ?></h3>
+                <div class="ccm-array-field" id="features-field">
+                    <?php if (!empty($features)): ?>
+                        <?php foreach ($features as $index => $feature): ?>
+                            <div class="ccm-feature-item-editor">
+                                <input type="text" name="features[<?php echo $index; ?>][title]" value="<?php echo esc_attr($feature['title']); ?>" placeholder="Feature Title" />
+                                <textarea name="features[<?php echo $index; ?>][description]" placeholder="Feature Description"><?php echo esc_textarea($feature['description']); ?></textarea>
+                                <button type="button" class="ccm-remove-item" onclick="removeArrayItem(this.parentElement)"><?php _e('Remove', 'credit-card-manager'); ?></button>
+                            </div>
+                        <?php endforeach; ?>
+                    <?php else: ?>
+                        <div class="ccm-feature-item-editor">
+                            <input type="text" name="features[0][title]" value="" placeholder="Feature Title" />
+                            <textarea name="features[0][description]" placeholder="Feature Description"></textarea>
+                            <button type="button" class="ccm-remove-item" onclick="removeArrayItem(this.parentElement)"><?php _e('Remove', 'credit-card-manager'); ?></button>
+                        </div>
+                    <?php endif; ?>
+                    <button type="button" class="ccm-add-item" onclick="addFeatureItem()"><?php _e('Add Feature', 'credit-card-manager'); ?></button>
+                </div>
+            </div>
        
        <div class="ccm-field-group">
            <h3><?php _e('Frequently Asked Questions (FAQs)', 'credit-card-manager'); ?></h3>
@@ -1105,6 +1138,20 @@ public function register_meta_fields() {
                update_post_meta($post_id, $field, $clean_array);
            }
        }
+
+       // Save features
+        if (isset($_POST['features']) && is_array($_POST['features'])) {
+            $clean_features = array();
+            foreach ($_POST['features'] as $feature) {
+                if (!empty($feature['title'])) {
+                    $clean_features[] = array(
+                        'title' => sanitize_text_field($feature['title']),
+                        'description' => sanitize_textarea_field($feature['description']),
+                    );
+                }
+            }
+            update_post_meta($post_id, 'features', $clean_features);
+        }
        
        // Save custom FAQs
        if (isset($_POST['custom_faqs']) && is_array($_POST['custom_faqs'])) {
@@ -1813,38 +1860,14 @@ if (is_wp_error($categories)) $categories = array();
     * Frontend Scripts
     */
    public function frontend_scripts() {
-       $is_archive = is_post_type_archive('credit-card');
-       $is_single = is_singular('credit-card');
-       $is_compare = is_page('compare-cards') || get_query_var('credit_card_compare');
-       
-       // Load styles and scripts only where needed
-       if ($is_archive || $is_single || $is_compare) {
-           // Core frontend styles (loaded on all credit card pages)
-           wp_enqueue_style(
-               'ccm-frontend',
-               ccm_asset_url('frontend.css'),
-               array(),
-               $this->version
-           );
-           
-    
-           // Core frontend JavaScript
-           wp_enqueue_script(
-               'ccm-frontend',
-               ccm_asset_url('frontend.js'),
-               array('jquery'),
-               $this->version,
-               true
-           );
-           
-           // Localize script for AJAX and API calls
+       if (is_post_type_archive('credit-card') || is_singular('credit-card') || is_page('compare-cards') || get_query_var('credit_card_compare')) {
+           wp_enqueue_style('ccm-frontend', ccm_asset_url('frontend.css'), array(), $this->version);
+           wp_enqueue_script('ccm-frontend', ccm_asset_url('frontend.js'), array('jquery'), $this->version, true);
+
            wp_localize_script('ccm-frontend', 'ccm_frontend', array(
                'ajax_url' => admin_url('admin-ajax.php'),
                'api_url' => rest_url('ccm/v1/'),
                'nonce' => wp_create_nonce('wp_rest'),
-               'is_archive' => $is_archive,
-               'is_single' => $is_single,
-               'is_compare' => $is_compare,
            ));
        }
    }

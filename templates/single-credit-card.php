@@ -75,31 +75,6 @@ if (!function_exists('ccm_has_seo_plugin') || !ccm_has_seo_plugin()) {
 }
 ?>
 
-<!-- Enhanced Schema Markup -->
-<script type="application/ld+json">
-{
-    "@context": "https://schema.org",
-    "@type": "Review",
-    "itemReviewed": {
-        "@type": "FinancialProduct",
-        "name": "<?php echo esc_js($card_name); ?>",
-        "brand": "<?php echo esc_js($bank_name); ?>",
-        "category": "Credit Card"
-    },
-    "reviewRating": {
-        "@type": "Rating",
-        "ratingValue": "<?php echo esc_js($rating); ?>",
-        "bestRating": "5"
-    },
-    "author": {
-        "@type": "Organization",
-        "name": "<?php bloginfo('name'); ?>"
-    },
-    "reviewBody": "<?php echo esc_js($meta_description); ?>",
-    "datePublished": "<?php echo get_the_date('c'); ?>",
-    "dateModified": "<?php echo get_the_modified_date('c'); ?>"
-}
-</script>
 
 <style>
 /* Professional Credit Card Single Page Styles */
@@ -1324,17 +1299,5 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 
-<?php
-// Output FAQ schema for SEO
-$card_faqs = ccm_get_card_faqs(get_the_ID());
-if (!empty($card_faqs)) {
-    $faq_schema = ccm_generate_faq_schema($card_faqs);
-    if ($faq_schema) {
-        echo '<script type="application/ld+json">' . "\n";
-        echo wp_json_encode($faq_schema, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) . "\n";
-        echo '</script>' . "\n";
-    }
-}
-?>
 
 <?php get_footer(); ?>

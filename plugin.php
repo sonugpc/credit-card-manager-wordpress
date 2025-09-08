@@ -99,6 +99,9 @@ class CreditCardManager {
         add_filter('rest_credit-card_query', array($this, 'filter_rest_api'), 10, 2);
         add_filter('rest_query_vars', array($this, 'add_rest_query_vars'));
         
+        // Admin notices for taxonomy conflicts
+        add_action('admin_notices', array($this, 'taxonomy_conflict_notice'));
+        
         register_activation_hook(__FILE__, array($this, 'activate'));
         register_deactivation_hook(__FILE__, array($this, 'deactivate'));
     }
@@ -204,33 +207,8 @@ class CreditCardManager {
             wp_insert_term('RuPay', 'network-type');
         }
         
-        // Store/Bank Taxonomy
-        $store_labels = array(
-            'name'              => _x('Banks/Stores', 'taxonomy general name', 'credit-card-manager'),
-            'singular_name'     => _x('Bank/Store', 'taxonomy singular name', 'credit-card-manager'),
-            'search_items'      => __('Search Banks/Stores', 'credit-card-manager'),
-            'all_items'         => __('All Banks/Stores', 'credit-card-manager'),
-            'parent_item'       => __('Parent Bank/Store', 'credit-card-manager'),
-            'parent_item_colon' => __('Parent Bank/Store:', 'credit-card-manager'),
-            'edit_item'         => __('Edit Bank/Store', 'credit-card-manager'),
-            'update_item'       => __('Update Bank/Store', 'credit-card-manager'),
-            'add_new_item'      => __('Add New Bank/Store', 'credit-card-manager'),
-            'new_item_name'     => __('New Bank/Store Name', 'credit-card-manager'),
-            'menu_name'         => __('Banks/Stores', 'credit-card-manager'),
-        );
-        
-        $store_args = array(
-            'hierarchical'      => false,
-            'labels'            => $store_labels,
-            'show_ui'           => true,
-            'show_admin_column' => true,
-            'show_in_rest'      => true,
-            'rest_base'         => 'stores',
-            'query_var'         => true,
-            'rewrite'           => array('slug' => 'store'),
-        );
-        
-        register_taxonomy('store', array('credit-card'), $store_args);
+        // Store/Bank Taxonomy - Only register for credit-card post type since it's already registered by another plugin
+        register_taxonomy_for_object_type('store', 'credit-card');
         
         // Card Categories Taxonomy
         $category_labels = array(
@@ -271,6 +249,71 @@ class CreditCardManager {
             wp_insert_term('Student', 'card-category', array('description' => 'Student credit cards'));
             wp_insert_term('No Annual Fee', 'card-category', array('description' => 'Cards with no annual fee'));
         }
+        
+        // Store which taxonomies had conflicts for admin notice
+        $this->check_taxonomy_conflicts();
+    }
+    
+    /**
+     * Check for taxonomy conflicts and store information
+     */
+    public function check_taxonomy_conflicts() {
+        $conflicted_taxonomies = array();
+        
+        $taxonomies_to_check = array(
+            'network-type' => 'Network Types',
+            'store' => 'Banks/Stores', 
+            'card-category' => 'Card Categories'
+        );
+        
+        foreach ($taxonomies_to_check as $taxonomy => $label) {
+            if (taxonomy_exists($taxonomy)) {
+                // Check if the taxonomy was registered by another plugin
+                $taxonomy_object = get_taxonomy($taxonomy);
+                if ($taxonomy_object && !in_array('credit-card', $taxonomy_object->object_type)) {
+                    $conflicted_taxonomies[] = array(
+                        'taxonomy' => $taxonomy,
+                        'label' => $label
+                    );
+                }
+            }
+        }
+        
+        if (!empty($conflicted_taxonomies)) {
+            update_option('ccm_taxonomy_conflicts', $conflicted_taxonomies);
+        } else {
+            delete_option('ccm_taxonomy_conflicts');
+        }
+    }
+    
+    /**
+     * Display admin notice for taxonomy conflicts
+     */
+    public function taxonomy_conflict_notice() {
+        $conflicts = get_option('ccm_taxonomy_conflicts', array());
+        
+        if (empty($conflicts)) {
+            return;
+        }
+        
+        $screen = get_current_screen();
+        if (!$screen || !in_array($screen->id, array('edit-credit-card', 'credit-card', 'plugins'))) {
+            return;
+        }
+        
+        ?>
+        <div class="notice notice-warning">
+            <p><strong>Credit Card Manager - Taxonomy Conflict Detected</strong></p>
+            <p>The following taxonomies are already registered by another plugin:</p>
+            <ul>
+                <?php foreach ($conflicts as $conflict): ?>
+                    <li><strong><?php echo esc_html($conflict['label']); ?></strong> (<?php echo esc_html($conflict['taxonomy']); ?>)</li>
+                <?php endforeach; ?>
+            </ul>
+            <p>The plugin has automatically registered these taxonomies for the credit-card post type to avoid conflicts. Your existing functionality should work normally.</p>
+            <p><em>If you experience issues, please deactivate the conflicting plugin temporarily and reactivate this plugin.</em></p>
+        </div>
+        <?php
     }
     
  /**

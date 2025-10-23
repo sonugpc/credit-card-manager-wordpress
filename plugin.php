@@ -847,13 +847,13 @@ public function register_meta_fields() {
             
             <div class="ccm-field-group">
                 <h3><?php _e('Basic Information', 'credit-card-manager'); ?></h3>
-                
-                
+
+
                 <div class="ccm-field">
                     <label for="rating"><?php _e('Rating (0-5)', 'credit-card-manager'); ?></label>
                     <input type="number" id="rating" name="rating" value="<?php echo esc_attr($rating); ?>" min="0" max="5" step="0.1" />
                 </div>
-                
+
                 <div class="ccm-field">
                     <label for="review_count"><?php _e('Review Count', 'credit-card-manager'); ?></label>
                     <input type="number" id="review_count" name="review_count" value="<?php echo esc_attr($review_count); ?>" min="0" />
@@ -1210,15 +1210,6 @@ public function register_meta_fields() {
            update_post_meta($post_id, 'custom_faqs', $clean_faqs);
        } else {
            delete_post_meta($post_id, 'custom_faqs');
-       }
-       
-       // Save bank name (store taxonomy)
-       if (isset($_POST['bank_name']) && !empty($_POST['bank_name'])) {
-           $bank_id = absint($_POST['bank_name']);
-           wp_set_post_terms($post_id, array($bank_id), 'store', false);
-       } else {
-           // Remove bank association if no bank selected
-           wp_set_post_terms($post_id, array(), 'store', false);
        }
    }
    

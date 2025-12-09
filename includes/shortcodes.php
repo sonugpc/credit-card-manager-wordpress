@@ -140,94 +140,81 @@ function ccm_register_credit_card_shortcode($atts) {
     ob_start();
     
     if ($atts['mode'] === 'mini') {
-        // Mini mode using existing CSS classes
+        // Mini mode using optimized CSS classes
         ?>
-        <div class="cc-card cc-card-shortcode-mini" data-id="<?php echo esc_attr($card_data['id']); ?>">
-            <!-- Full width header -->
-            <div class="cc-card-header" style="background: var(--cc-gray-50); border-bottom: 1px solid var(--cc-gray-200); padding: 1.25rem;">
-                <h3 class="cc-card-title" style="margin: 0 0 0.5rem 0; font-size: 1.25rem;"><?php echo esc_html($card_data['title']); ?></h3>
+        <article class="ccm-card ccm-card-mini" data-id="<?php echo esc_attr($card_data['id']); ?>">
+            <header class="ccm-card-header">
+                <h3 class="ccm-card-title"><?php echo esc_html($card_data['title']); ?></h3>
                 <?php if ($atts['show_rating'] === 'yes' && $card_data['rating']): ?>
-                <div class="cc-card-rating">
-                    <span style="color: var(--cc-yellow-400);"><?php echo str_repeat('⭐', floor($card_data['rating'])); ?></span>
-                    <span class="cc-card-rating-text">(<?php echo esc_html($card_data['rating']); ?>/5)</span>
+                <div class="ccm-card-rating">
+                    <div class="ccm-rating-stars">
+                        <?php echo str_repeat('⭐', floor($card_data['rating'])); ?>
+                    </div>
+                    <span class="ccm-rating-text">(<?php echo esc_html($card_data['rating']); ?>/5)</span>
                 </div>
                 <?php endif; ?>
-            </div>
-            
-            <!-- Content body -->
-            <div class="cc-card-content" style="display: flex; gap: 1.5rem; align-items: flex-start; position: relative;">
-                <div class="cc-card-image" style="flex-shrink: 0; width: 140px; height: auto; background: none; padding: 0; text-align: center;">
+            </header>
+
+            <div class="ccm-card-content ccm-card-content-mini">
+                <div class="ccm-card-image-container">
                     <?php if ($card_data['image_url']): ?>
-                        <img src="<?php echo esc_url($card_data['image_url']); ?>" 
-                             alt="<?php echo esc_attr($card_data['title']); ?>" 
-                             style="width: 100%; height: auto; border-radius: var(--cc-radius); object-fit: cover;" />
+                        <img src="<?php echo esc_url($card_data['image_url']); ?>"
+                             alt="<?php echo esc_attr($card_data['title']); ?>"
+                             class="ccm-card-image"
+                             loading="lazy">
                     <?php else: ?>
-                        <div style="width: 100%; height: 100px; border: 2px dashed var(--cc-gray-300); border-radius: var(--cc-radius); display: flex; flex-direction: column; align-items: center; justify-content: center; background: var(--cc-gray-50); color: var(--cc-gray-400);">
-                            <span style="font-size: 2em; margin-bottom: 4px;">💳</span>
-                            <small style="font-size: 0.8em;">No Image</small>
+                        <div class="ccm-card-image-placeholder">
+                            <span class="ccm-card-image-icon">💳</span>
+                            <small>No Image</small>
                         </div>
                     <?php endif; ?>
-                     <label class="cc-btn-compare" 
-                           data-id="<?php echo esc_attr($card_data['id']); ?>"
-                           data-title="<?php echo esc_attr($card_data['title']); ?>"
-                           style="display: inline-flex; align-items: center; justify-content: center; gap: 0.25rem; padding: 0.375rem 0.5rem; background: var(--cc-gray-50); border: 1px solid var(--cc-gray-200); border-radius: 6px; cursor: pointer; font-size: 0.75rem; font-weight: 500; margin-top: 0.5rem;">
-                        <input type="checkbox" style="margin: 0; width: 12px; height: 12px; accent-color: var(--cc-blue-600);">
+
+                    <label class="ccm-compare-label">
+                        <input type="checkbox" class="ccm-compare-checkbox" data-id="<?php echo esc_attr($card_data['id']); ?>">
                         <span>Compare</span>
                     </label>
                 </div>
-                
-                <div style="flex: 1; min-width: 0;">
-                    <div style="display: grid; gap: 0.75rem;">
-                        <?php if ($card_data['joining_fee']): ?>
-                        <div style="display: flex; justify-content: space-between; align-items: center;">
-                            <span style="color: var(--cc-blue-600); font-weight: 500; font-size: 0.95em;">Joining Fee</span>
-                            <span style="color: var(--cc-gray-800); font-weight: 600; font-size: 0.95em;">₹<?php echo esc_html(number_format($card_data['joining_fee'])); ?> + GST</span>
-                        </div>
-                        <?php endif; ?>
-                        
-                        <?php if ($card_data['annual_fee']): ?>
-                        <div style="display: flex; justify-content: space-between; align-items: center;">
-                            <span style="color: var(--cc-blue-600); font-weight: 500; font-size: 0.95em;">Renewal Fee</span>
-                            <span style="color: var(--cc-gray-800); font-weight: 600; font-size: 0.95em;">₹<?php echo esc_html(number_format($card_data['annual_fee'])); ?> + GST</span>
-                        </div>
-                        <?php endif; ?>
-                        
-                        <?php if (!empty($card_data['best_for'])): ?>
-                        <div style="display: flex; justify-content: space-between; align-items: center;">
-                            <span style="color: var(--cc-blue-600); font-weight: 500; font-size: 0.95em;">Best Suited For</span>
-                            <span style="color: var(--cc-gray-800); font-weight: 600; font-size: 0.95em;"><?php echo esc_html(implode(' | ', array_slice($card_data['best_for'], 0, 2))); ?></span>
-                        </div>
-                        <?php endif; ?>
-                        
-                        <?php if ($card_data['cashback_rate'] || $card_data['welcome_bonus_type']): ?>
-                        <div style="display: flex; justify-content: space-between; align-items: center;">
-                            <span style="color: var(--cc-blue-600); font-weight: 500; font-size: 0.95em;">Reward Type</span>
-                            <span style="background: var(--cc-blue-600); color: white; padding: 2px 8px; border-radius: 4px; font-size: 0.8em; font-weight: 500;"><?php echo esc_html($card_data['welcome_bonus_type'] ?: 'NeuCoins'); ?></span>
-                        </div>
-                        <?php endif; ?>
-                        
-                        <?php if ($card_data['welcome_bonus_points'] || $card_data['welcome_bonus']): ?>
-                        <div style="display: flex; justify-content: space-between; align-items: center;">
-                            <span style="color: var(--cc-blue-600); font-weight: 500; font-size: 0.95em;">Welcome Benefits</span>
-                            <span style="color: var(--cc-gray-800); font-weight: 600; font-size: 0.95em;"><?php echo esc_html($card_data['welcome_bonus_points'] ? $card_data['welcome_bonus_points'] . ' ' . ($card_data['welcome_bonus_type'] ?: 'NeuCoins') : $card_data['welcome_bonus']); ?></span>
-                        </div>
-                        <?php endif; ?>
-                    </div>
-                </div>
 
-                <div style="position: absolute; top: 8px; right: 8px; display: flex; flex-direction: column; gap: 0.5rem; align-items: flex-end; z-index: 10;">
-                    <?php if ($card_data['apply_link']): ?>
-                    <a href="<?php echo esc_url($card_data['apply_link']); ?>" 
-                       class="cc-btn cc-btn-apply" 
-                       target="_blank" 
-                       rel="noopener"
-                       style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.5rem 1rem; background: var(--cc-blue-600); color: white; border: none; border-radius: 6px; text-decoration: none; font-size: 0.875rem; font-weight: 600; box-shadow: 0 2px 4px rgba(37, 99, 235, 0.2); transition: all 0.2s;">
-                        Apply Now <span style="font-size: 0.8em;">✈</span>
-                    </a>
+                <div class="ccm-card-details">
+                    <?php if ($card_data['joining_fee']): ?>
+                    <div class="ccm-highlight">
+                        <span class="ccm-highlight-label">Joining Fee</span>
+                        <span class="ccm-highlight-value">₹<?php echo esc_html(number_format($card_data['joining_fee'])); ?> + GST</span>
+                    </div>
+                    <?php endif; ?>
+
+                    <?php if ($card_data['annual_fee']): ?>
+                    <div class="ccm-highlight">
+                        <span class="ccm-highlight-label">Renewal Fee</span>
+                        <span class="ccm-highlight-value">₹<?php echo esc_html(number_format($card_data['annual_fee'])); ?> + GST</span>
+                    </div>
+                    <?php endif; ?>
+
+                    <?php if (!empty($card_data['best_for'])): ?>
+                    <div class="ccm-highlight">
+                        <span class="ccm-highlight-label">Best For</span>
+                        <span class="ccm-highlight-value"><?php echo esc_html(implode(' | ', array_slice($card_data['best_for'], 0, 2))); ?></span>
+                    </div>
+                    <?php endif; ?>
+
+                    <?php if ($card_data['welcome_bonus_points'] || $card_data['welcome_bonus']): ?>
+                    <div class="ccm-highlight">
+                        <span class="ccm-highlight-label">Welcome Bonus</span>
+                        <span class="ccm-highlight-value"><?php echo esc_html($card_data['welcome_bonus_points'] ? $card_data['welcome_bonus_points'] . ' ' . ($card_data['welcome_bonus_type'] ?: 'NeuCoins') : $card_data['welcome_bonus']); ?></span>
+                    </div>
                     <?php endif; ?>
                 </div>
+
+                <?php if ($card_data['apply_link']): ?>
+                <div class="ccm-card-actions">
+                    <a href="<?php echo esc_url($card_data['apply_link']); ?>"
+                       class="ccm-btn ccm-btn-primary"
+                       target="_blank"
+                       rel="noopener">Apply Now</a>
+                </div>
+                <?php endif; ?>
             </div>
-        </div>
+        </article>
         <?php
     } else {
         // Full mode using existing CSS classes with collapsible sections

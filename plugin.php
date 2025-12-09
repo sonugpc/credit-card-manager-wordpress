@@ -73,8 +73,7 @@ require_once plugin_dir_path(__FILE__) . 'includes/shortcodes.php';
 // Include Helper Functions
 require_once plugin_dir_path(__FILE__) . 'includes/helper-functions.php';
 
-// Include SEO Functions
-require_once plugin_dir_path(__FILE__) . 'includes/seo-functions.php';
+// SEO functions removed - using dedicated WordPress SEO plugin
 
 class CreditCardManager {
     
@@ -1640,22 +1639,25 @@ public function register_meta_fields() {
    }
    
    /**
-    * Format Credit Card Data for API
+    * Format Credit Card Data for API - Optimized to reduce database queries
     */
    public function format_credit_card_data($post_id) {
        $post = get_post($post_id);
-       
-       // Get taxonomies
-   $banks = wp_get_post_terms($post_id, 'store');
-$network_types = wp_get_post_terms($post_id, 'network-type');
-$categories = wp_get_post_terms($post_id, 'card-category');
 
-// Handle WP_Error cases
-if (is_wp_error($banks)) $banks = array();
-if (is_wp_error($network_types)) $network_types = array();
-if (is_wp_error($categories)) $categories = array();
-       
-       // Get meta fields
+       // Get taxonomies with error handling
+       $banks = wp_get_post_terms($post_id, 'store');
+       $network_types = wp_get_post_terms($post_id, 'network-type');
+       $categories = wp_get_post_terms($post_id, 'card-category');
+
+       // Handle WP_Error cases
+       if (is_wp_error($banks)) $banks = array();
+       if (is_wp_error($network_types)) $network_types = array();
+       if (is_wp_error($categories)) $categories = array();
+
+       // Get ALL meta data in single query to avoid N+1 problem
+       $all_meta = get_post_meta($post_id);
+
+       // Define meta fields and get values from cached array
        $meta_fields = array(
            'rating', 'review_count', 'annual_fee', 'joining_fee',
            'welcome_bonus', 'welcome_bonus_points', 'welcome_bonus_type', 'cashback_rate',
@@ -1667,10 +1669,10 @@ if (is_wp_error($categories)) $categories = array();
            'overall_score', 'reward_score', 'fees_score', 'benefits_score',
            'support_score', 'reward_rate', 'custom_faqs'
        );
-       
+
        $meta_data = array();
        foreach ($meta_fields as $field) {
-           $meta_data[$field] = get_post_meta($post_id, $field, true);
+           $meta_data[$field] = isset($all_meta[$field][0]) ? maybe_unserialize($all_meta[$field][0]) : '';
        }
        
        // Get featured image
@@ -1891,10 +1893,11 @@ if (is_wp_error($categories)) $categories = array();
    }
    
    /**
-    * Frontend Scripts
+    * Frontend Scripts - Optimized with conditional loading
     */
    public function frontend_scripts() {
-       if (is_post_type_archive('credit-card') || is_singular('credit-card') || is_page('compare-cards') || get_query_var('credit_card_compare')) {
+       // Only load assets on relevant pages to improve performance
+       if ($this->should_load_assets()) {
            wp_enqueue_style('ccm-frontend', ccm_asset_url('frontend.css'), array(), $this->version);
            wp_enqueue_script('ccm-frontend', ccm_asset_url('frontend.js'), array('jquery'), $this->version, true);
 
@@ -1904,6 +1907,30 @@ if (is_wp_error($categories)) $categories = array();
                'nonce' => wp_create_nonce('wp_rest'),
            ));
        }
+   }
+
+   /**
+    * Check if assets should be loaded on current page
+    */
+   private function should_load_assets() {
+       // Check for plugin-specific pages
+       if (is_post_type_archive('credit-card') ||
+           is_singular('credit-card') ||
+           is_page('compare-cards') ||
+           get_query_var('credit_card_compare')) {
+           return true;
+       }
+
+       // Check for shortcodes in content
+       global $post;
+       if (is_a($post, 'WP_Post') &&
+           (has_shortcode($post->post_content, 'credit-card') ||
+            has_shortcode($post->post_content, 'credit_card_grid') ||
+            has_shortcode($post->post_content, 'ccm_filters'))) {
+           return true;
+       }
+
+       return false;
    }
    
    /**

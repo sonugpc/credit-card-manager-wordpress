@@ -67,15 +67,6 @@ $breadcrumbs = [
 ];
 ?>
 
-<?php
-// Only output meta tags if no SEO plugin is detected
-if (!function_exists('ccm_has_seo_plugin') || !ccm_has_seo_plugin()) {
-    // Output meta tags only if no SEO plugin
-    ccm_add_meta_tags($page_title, $meta_description, $canonical_url, $keywords);
-} else {
-    echo '<!-- Meta tags handled by ' . (class_exists('RankMath') ? 'RankMath' : 'SEO Plugin') . ' -->' . "\n";
-}
-?>
 
 <!-- Breadcrumb Navigation -->
 <nav style="background: white; padding: 1rem 1.5rem; border-bottom: 1px solid #e5e7eb;">

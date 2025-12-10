@@ -864,7 +864,6 @@ $card_image = has_post_thumbnail() ? get_the_post_thumbnail_url($post_id, 'large
 }
 
 .cc-card-image {
-    width: 100%;
     height: 120px;
     background: var(--gray-100);
     border-radius: var(--radius-md);

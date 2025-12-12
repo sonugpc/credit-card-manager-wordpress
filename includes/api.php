@@ -123,32 +123,143 @@ function ccm_get_credit_cards($request) {
     $orderby = $request->get_param('orderby') ? sanitize_text_field($request->get_param('orderby')) : 'date';
     $order = $request->get_param('order') ? sanitize_text_field($request->get_param('order')) : 'DESC';
 
+    // Support sort_by and sort_order parameters for consistency with archive page
+    $sort_by = $request->get_param('sort_by') ? sanitize_text_field($request->get_param('sort_by')) : $orderby;
+    $sort_order = $request->get_param('sort_order') ? sanitize_text_field($request->get_param('sort_order')) : $order;
+
+    // Get filter parameters (handle arrays for multiple selections)
+    $bank = $request->get_param('bank') ? (array) $request->get_param('bank') : [];
+    $network = $request->get_param('network_type') ? (array) $request->get_param('network_type') : [];
+    $category = $request->get_param('category') ? (array) $request->get_param('category') : [];
+    $min_rating = $request->get_param('min_rating') ? sanitize_text_field($request->get_param('min_rating')) : '';
+    $max_fee = $request->get_param('max_annual_fee') ? sanitize_text_field($request->get_param('max_annual_fee')) : '';
+    $featured = $request->get_param('featured') ? sanitize_text_field($request->get_param('featured')) : '';
+    $trending = $request->get_param('trending') ? sanitize_text_field($request->get_param('trending')) : '';
+
+    // Sanitize array values
+    $bank = array_map('sanitize_text_field', $bank);
+    $network = array_map('sanitize_text_field', $network);
+    $category = array_map('sanitize_text_field', $category);
+
     // Build query args
     $args = [
         'post_type' => 'credit-card',
         'post_status' => 'publish',
         'posts_per_page' => $per_page,
         'paged' => $page,
-        'orderby' => $orderby,
-        'order' => $order,
     ];
 
     // Add sorting logic
-    switch ($orderby) {
+    switch ($sort_by) {
         case 'rating':
             $args['meta_key'] = 'rating';
             $args['orderby'] = 'meta_value_num';
+            $args['order'] = strtoupper($sort_order);
             break;
         case 'annual_fee':
-            $args['meta_key'] = 'annual_fee_numeric';
+            $args['meta_key'] = 'annual_fee';
             $args['orderby'] = 'meta_value_num';
+            $args['order'] = strtoupper($sort_order);
             break;
         case 'review_count':
             $args['meta_key'] = 'review_count';
             $args['orderby'] = 'meta_value_num';
+            $args['order'] = strtoupper($sort_order);
             break;
+        case 'date':
         default:
             $args['orderby'] = 'date';
+            $args['order'] = strtoupper($sort_order);
+            break;
+    }
+
+    // Handle filtering
+    $tax_query = [];
+    $meta_query = [];
+
+    // Bank filter (store taxonomy)
+    if (!empty($bank)) {
+        $tax_query[] = [
+            'taxonomy' => 'store',
+            'field'    => 'slug',
+            'terms'    => $bank,
+            'operator' => 'IN',
+        ];
+    }
+
+    // Category filter (card-category taxonomy)
+    if (!empty($category)) {
+        $tax_query[] = [
+            'taxonomy' => 'card-category',
+            'field'    => 'slug',
+            'terms'    => $category,
+            'operator' => 'IN',
+        ];
+    }
+
+    // Network type filter (network-type taxonomy)
+    if (!empty($network)) {
+        $tax_query[] = [
+            'taxonomy' => 'network-type',
+            'field'    => 'slug',
+            'terms'    => $network,
+            'operator' => 'IN',
+        ];
+    }
+
+    // Minimum rating filter
+    if (!empty($min_rating) && is_numeric($min_rating)) {
+        $meta_query[] = [
+            'key'     => 'rating',
+            'value'   => $min_rating,
+            'compare' => '>=',
+            'type'    => 'NUMERIC',
+        ];
+    }
+
+    // Maximum annual fee filter
+    if (!empty($max_fee) && is_numeric($max_fee)) {
+        $meta_query[] = [
+            'key'     => 'annual_fee',
+            'value'   => $max_fee,
+            'compare' => '<=',
+            'type'    => 'NUMERIC',
+        ];
+    }
+
+    // Featured filter
+    if (!empty($featured)) {
+        $meta_query[] = [
+            'key'     => 'featured',
+            'value'   => '1',
+            'compare' => '=',
+        ];
+    }
+
+    // Trending filter
+    if (!empty($trending)) {
+        $meta_query[] = [
+            'key'     => 'trending',
+            'value'   => '1',
+            'compare' => '=',
+        ];
+    }
+
+    // Add tax_query and meta_query to args if they have filters
+    if (!empty($tax_query)) {
+        $args['tax_query'] = $tax_query;
+        // If multiple tax queries, set relation to AND
+        if (count($tax_query) > 1) {
+            $args['tax_query']['relation'] = 'AND';
+        }
+    }
+
+    if (!empty($meta_query)) {
+        $args['meta_query'] = $meta_query;
+        // If multiple meta queries, set relation to AND
+        if (count($meta_query) > 1) {
+            $args['meta_query']['relation'] = 'AND';
+        }
     }
 
     $query = new WP_Query($args);

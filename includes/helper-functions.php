@@ -422,13 +422,13 @@ function ccm_generate_faq_schema($faqs) {
     if (empty($faqs)) {
         return null;
     }
-    
+
     $schema = array(
         '@context' => 'https://schema.org',
         '@type' => 'FAQPage',
         'mainEntity' => array()
     );
-    
+
     foreach ($faqs as $faq) {
         if (!empty($faq['question']) && !empty($faq['answer'])) {
             $schema['mainEntity'][] = array(
@@ -441,6 +441,70 @@ function ccm_generate_faq_schema($faqs) {
             );
         }
     }
-    
+
     return !empty($schema['mainEntity']) ? $schema : null;
+}
+
+/**
+ * Get filters data for archive page - cached version
+ */
+function ccm_get_filters_data() {
+    static $filters_cache = null;
+
+    if ($filters_cache !== null) {
+        return $filters_cache;
+    }
+
+    // Try to get from transient cache first
+    $cache_key = 'ccm_filters_data';
+    $cached_data = get_transient($cache_key);
+
+    if ($cached_data !== false) {
+        $filters_cache = $cached_data;
+        return $cached_data;
+    }
+
+    // Make API call to get filters data
+    $api_url = rest_url('ccm/v1/credit-cards/filters');
+
+    $response = wp_remote_get($api_url, array(
+        'timeout' => 10,
+        'headers' => array(
+            'Accept' => 'application/json',
+        ),
+    ));
+
+    if (is_wp_error($response)) {
+        // Return empty filters on error
+        $filters_cache = array(
+            'banks' => array(),
+            'network_types' => array(),
+            'categories' => array(),
+            'rating_ranges' => array(),
+            'fee_ranges' => array(),
+            'income_ranges' => array(),
+        );
+        return $filters_cache;
+    }
+
+    $data = json_decode(wp_remote_retrieve_body($response), true);
+
+    if (empty($data) || !is_array($data)) {
+        // Return empty filters if no data
+        $filters_cache = array(
+            'banks' => array(),
+            'network_types' => array(),
+            'categories' => array(),
+            'rating_ranges' => array(),
+            'fee_ranges' => array(),
+            'income_ranges' => array(),
+        );
+        return $filters_cache;
+    }
+
+    // Cache the data for 1 hour
+    set_transient($cache_key, $data, HOUR_IN_SECONDS);
+
+    $filters_cache = $data;
+    return $data;
 }

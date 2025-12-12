@@ -712,7 +712,6 @@ $card_image = has_post_thumbnail() ? get_the_post_thumbnail_url($post_id, 'large
     background: var(--gray-100);
     padding: 0.25rem 0.5rem;
     border-radius: 4px;
-    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
     font-size: 0.875rem;
 }
 

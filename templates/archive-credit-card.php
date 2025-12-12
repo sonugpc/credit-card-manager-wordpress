@@ -8,10 +8,10 @@
 
 get_header();
 
-// Get filter parameters from URL
-$current_bank = isset($_GET['bank']) ? sanitize_text_field($_GET['bank']) : '';
-$current_network = isset($_GET['network_type']) ? sanitize_text_field($_GET['network_type']) : '';
-$current_category = isset($_GET['category']) ? sanitize_text_field($_GET['category']) : '';
+// Get filter parameters from URL (handle arrays for multiple selections)
+$current_bank = isset($_GET['bank']) ? (array) $_GET['bank'] : [];
+$current_network = isset($_GET['network_type']) ? (array) $_GET['network_type'] : [];
+$current_category = isset($_GET['category']) ? (array) $_GET['category'] : [];
 $current_min_rating = isset($_GET['min_rating']) ? sanitize_text_field($_GET['min_rating']) : '';
 $current_max_fee = isset($_GET['max_annual_fee']) ? sanitize_text_field($_GET['max_annual_fee']) : '';
 $current_featured = isset($_GET['featured']) ? sanitize_text_field($_GET['featured']) : '';
@@ -19,18 +19,134 @@ $current_trending = isset($_GET['trending']) ? sanitize_text_field($_GET['trendi
 $current_sort = isset($_GET['sort_by']) ? sanitize_text_field($_GET['sort_by']) : 'date';
 $current_order = isset($_GET['sort_order']) ? sanitize_text_field($_GET['sort_order']) : 'desc';
 
+// Sanitize array values
+$current_bank = array_map('sanitize_text_field', $current_bank);
+$current_network = array_map('sanitize_text_field', $current_network);
+$current_category = array_map('sanitize_text_field', $current_category);
+
 // Get filter data from cached function instead of API call for better performance
 $filters = ccm_get_filters_data();
 
-// Build simple query args for credit cards - just sort by date, no filters initially
+// Build query args for credit cards with sorting support
 $args = [
     'post_type' => 'credit-card',
     'post_status' => 'publish',
     'posts_per_page' => 8, // Show 8 initially, load more will add 8 each time
     'paged' => 1, // Always start with page 1 for AJAX loading
-    'orderby' => 'date',
-    'order' => 'DESC',
 ];
+
+// Handle sorting
+switch ($current_sort) {
+    case 'rating':
+        $args['meta_key'] = 'rating';
+        $args['orderby'] = 'meta_value_num';
+        $args['order'] = strtoupper($current_order);
+        break;
+    case 'annual_fee':
+        $args['meta_key'] = 'annual_fee';
+        $args['orderby'] = 'meta_value_num';
+        $args['order'] = strtoupper($current_order);
+        break;
+    case 'review_count':
+        $args['meta_key'] = 'review_count';
+        $args['orderby'] = 'meta_value_num';
+        $args['order'] = strtoupper($current_order);
+        break;
+    case 'date':
+    default:
+        $args['orderby'] = 'date';
+        $args['order'] = strtoupper($current_order);
+        break;
+}
+
+// Handle filtering
+$tax_query = [];
+$meta_query = [];
+
+// Bank filter (store taxonomy)
+if (!empty($current_bank)) {
+    $tax_query[] = [
+        'taxonomy' => 'store',
+        'field'    => 'slug',
+        'terms'    => $current_bank,
+        'operator' => 'IN',
+    ];
+}
+
+// Category filter (card-category taxonomy)
+if (!empty($current_category)) {
+    $tax_query[] = [
+        'taxonomy' => 'card-category',
+        'field'    => 'slug',
+        'terms'    => $current_category,
+        'operator' => 'IN',
+    ];
+}
+
+// Network type filter (network-type taxonomy)
+if (!empty($current_network)) {
+    $tax_query[] = [
+        'taxonomy' => 'network-type',
+        'field'    => 'slug',
+        'terms'    => $current_network,
+        'operator' => 'IN',
+    ];
+}
+
+// Minimum rating filter
+if (!empty($current_min_rating) && is_numeric($current_min_rating)) {
+    $meta_query[] = [
+        'key'     => 'rating',
+        'value'   => $current_min_rating,
+        'compare' => '>=',
+        'type'    => 'NUMERIC',
+    ];
+}
+
+// Maximum annual fee filter
+if (!empty($current_max_fee) && is_numeric($current_max_fee)) {
+    $meta_query[] = [
+        'key'     => 'annual_fee',
+        'value'   => $current_max_fee,
+        'compare' => '<=',
+        'type'    => 'NUMERIC',
+    ];
+}
+
+// Featured filter
+if (!empty($current_featured)) {
+    $meta_query[] = [
+        'key'     => 'featured',
+        'value'   => '1',
+        'compare' => '=',
+    ];
+}
+
+// Trending filter
+if (!empty($current_trending)) {
+    $meta_query[] = [
+        'key'     => 'trending',
+        'value'   => '1',
+        'compare' => '=',
+    ];
+}
+
+// Add tax_query and meta_query to args if they have filters
+if (!empty($tax_query)) {
+    $args['tax_query'] = $tax_query;
+    // If multiple tax queries, set relation to AND
+    if (count($tax_query) > 1) {
+        $args['tax_query']['relation'] = 'AND';
+    }
+}
+
+if (!empty($meta_query)) {
+    $args['meta_query'] = $meta_query;
+    // If multiple meta queries, set relation to AND
+    if (count($meta_query) > 1) {
+        $args['meta_query']['relation'] = 'AND';
+    }
+}
 
 // Run the query
 $credit_cards = new WP_Query($args);
@@ -81,16 +197,20 @@ $archive_description = 'Compare the best credit cards in India. Find cashback, r
 $archive_canonical = get_post_type_archive_link('credit-card');
 
 // Add filter-based title and description
-if ($current_bank) {
-    $bank_term = get_term_by('slug', $current_bank, 'store');
-    $bank_display_name = $bank_term ? $bank_term->name : $current_bank;
+if (!empty($current_bank)) {
+    // Use first bank for SEO title when multiple banks are selected
+    $first_bank = is_array($current_bank) ? $current_bank[0] : $current_bank;
+    $bank_term = get_term_by('slug', $first_bank, 'store');
+    $bank_display_name = $bank_term ? $bank_term->name : $first_bank;
     $archive_title = $bank_display_name . ' Credit Cards - Compare & Apply Online';
     $archive_description = "Compare the best " . $bank_display_name . " credit cards in India. Find cashback, rewards, and travel cards with detailed reviews and instant applications.";
 }
 
-if ($current_category) {
-    $category_term = get_term_by('slug', $current_category, 'card-category');
-    $category_display_name = $category_term ? $category_term->name : $current_category;
+if (!empty($current_category)) {
+    // Use first category for SEO title when multiple categories are selected
+    $first_category = is_array($current_category) ? $current_category[0] : $current_category;
+    $category_term = get_term_by('slug', $first_category, 'card-category');
+    $category_display_name = $category_term ? $category_term->name : $first_category;
     $archive_title = 'Best ' . $category_display_name . ' Credit Cards in India - Compare & Apply';
     $archive_description = "Find the best " . $category_display_name . " credit cards in India. Compare features, benefits, fees and apply online for instant approval.";
 }
@@ -172,282 +292,301 @@ if ($current_page > 1) {
 </script>
 
 <div class="ccm-archive">
-    <!-- Hero Section - Critical for LCP -->
-    <section class="ccm-hero">
-        <div class="ccm-hero-content">
-            <h1><?php echo esc_html($archive_title); ?></h1>
-            <p><?php echo esc_html($archive_description); ?></p>
-            <div class="ccm-hero-stats">
-                <div class="ccm-stat">
-                    <span class="ccm-stat-number"><?php echo number_format($credit_cards->found_posts); ?>+</span>
-                    <span class="ccm-stat-label">Credit Cards</span>
-                </div>
-                <div class="ccm-stat">
-                    <span class="ccm-stat-number">50+</span>
-                    <span class="ccm-stat-label">Banks & NBFCs</span>
-                </div>
-                <div class="ccm-stat">
-                    <span class="ccm-stat-number">10K+</span>
-                    <span class="ccm-stat-label">Happy Customers</span>
+    <!-- Simplified Hero Section with Breadcrumb -->
+  
+
+    <!-- CTA Section -->
+    <section class="ccm-top-cta">
+        <div class="ccm-container">
+            <div class="ccm-cta-content">
+                <h1 class="ccm-cta-main-title">Best Credit Cards in India - Compare & Apply Online On Bigtricks</h1>
+                <p>Credit cards come with varied features and benefits tailored to different lifestyles. The key is to choose the one that aligns with your spending preferences. Paisabazaar makes it simple by bringing 70+ cards in one place for you to compare, check eligibility, apply through a completely digital process, and get instant approval.</p>
+
+                <div class="ccm-cta-features">
+                    <div class="ccm-cta-feature">
+                        <div class="ccm-cta-feature-icon">
+                            <span class="rbi rbi-chart-o"></span>
+                        </div>
+                        <h4>Compare India's best credit cards</h4>
+                        <p>See cards from top Banks & issuers</p>
+                    </div>
+                    <div class="ccm-cta-feature">
+                        <div class="ccm-cta-feature-icon">
+                            <span class="rbi rbi-user"></span>
+                        </div>
+                        <h4>Choose card matching your lifestyle</h4>
+                        <p>Wide choice of 70+ credit cards</p>
+                    </div>
                 </div>
             </div>
         </div>
     </section>
 
-    <!-- Filters Section -->
-    <section class="ccm-filters-section">
+    <!-- Main Content Area with Sidebar and Cards -->
+    <div class="ccm-main-wrapper">
         <div class="ccm-container">
-            <form class="ccm-filters-form" method="get" action="<?php echo get_post_type_archive_link('credit-card'); ?>">
-                <div class="ccm-filters-header">
-                    <h2 class="ccm-filters-title">🔍 Find Your Perfect Credit Card</h2>
-                    <button type="button" class="ccm-filters-toggle" id="toggle-filters">
-                        <span id="toggle-text">Hide Filters</span>
-                    </button>
-                </div>
+            <div class="ccm-layout-grid">
+                <!-- Left Sidebar - Filters (Desktop) -->
+                <aside class="ccm-sidebar-filters">
+                    <div class="ccm-sidebar-sticky">
+                        <div class="ccm-filters-header">
+                            <h2 class="ccm-filters-title">Filters</h2>
+                            <button type="button" class="ccm-clear-all" id="clear-all-filters">Clear All</button>
+                        </div>
 
-                <div class="ccm-filters-grid" id="filter-content">
+                        <form class="ccm-filters-form" method="get" action="<?php echo get_post_type_archive_link('credit-card'); ?>" id="sidebar-filter-form">
+                            <?php if (!empty($filters['banks'])): ?>
+                            <div class="ccm-filter-group">
+                                <h3 class="ccm-filter-label">BANKS</h3>
+                                <div class="ccm-filter-options">
+                                    <?php
+                                    $bank_count = 0;
+                                    foreach ($filters['banks'] as $bank):
+                                        $is_hidden = $bank_count >= 5 ? 'style="display: none;"' : '';
+                                        $bank_count++;
+                                    ?>
+                                    <label class="ccm-checkbox-label" <?php echo $is_hidden; ?>>
+                                        <input type="checkbox" name="bank[]" value="<?php echo esc_attr($bank['slug']); ?>" <?php checked(in_array($bank['slug'], (array)$current_bank)); ?>>
+                                        <span class="ccm-checkbox-text"><?php echo esc_html($bank['name']); ?></span>
+                                    </label>
+                                    <?php endforeach; ?>
+                                    <?php if (count($filters['banks']) > 5): ?>
+                                    <button type="button" class="ccm-show-more" data-target="banks">+ Show More</button>
+                                    <?php endif; ?>
+                                </div>
+                            </div>
+                            <?php endif; ?>
+
+                            <?php if (!empty($filters['categories'])): ?>
+                            <div class="ccm-filter-group">
+                                <h3 class="ccm-filter-label">CATEGORIES</h3>
+                                <div class="ccm-filter-options">
+                                    <?php foreach ($filters['categories'] as $category): ?>
+                                    <label class="ccm-checkbox-label">
+                                        <input type="checkbox" name="category[]" value="<?php echo esc_attr($category['slug']); ?>" <?php checked(in_array($category['slug'], (array)$current_category)); ?>>
+                                        <span class="ccm-checkbox-text"><?php echo esc_html($category['name']); ?></span>
+                                    </label>
+                                    <?php endforeach; ?>
+                                </div>
+                            </div>
+                            <?php endif; ?>
+
+                            <?php if (!empty($filters['network_types'])): ?>
+                            <div class="ccm-filter-group">
+                                <h3 class="ccm-filter-label">NETWORK TYPE</h3>
+                                <div class="ccm-filter-options">
+                                    <?php foreach ($filters['network_types'] as $network): ?>
+                                    <label class="ccm-checkbox-label">
+                                        <input type="checkbox" name="network_type[]" value="<?php echo esc_attr($network['slug']); ?>" <?php checked(in_array($network['slug'], (array)$current_network)); ?>>
+                                        <span class="ccm-checkbox-text"><?php echo esc_html($network['name']); ?></span>
+                                    </label>
+                                    <?php endforeach; ?>
+                                </div>
+                            </div>
+                            <?php endif; ?>
+
+                            <button type="submit" class="ccm-btn ccm-btn-primary ccm-btn-block">Apply Filters</button>
+                        </form>
+                    </div>
+                </aside>
+
+                <!-- Right Content Area - Cards -->
+                <main class="ccm-main-content">
+
+                    <!-- Results Bar -->
+                    <div class="ccm-results-bar">
+                        <div class="ccm-results-count">
+                            <strong><?php echo number_format($credit_cards->found_posts); ?></strong> credit cards found
+                        </div>
+                        <div class="ccm-sort-controls">
+                            <span class="ccm-sort-label">Sort by:</span>
+                            <select class="ccm-sort-select" id="sort-select" onchange="ccmUpdateSort(this.value)">
+                                <option value="date-desc" <?php echo ($current_sort === 'date' && $current_order === 'desc') ? 'selected' : ''; ?>>Newest First</option>
+                                <option value="rating-desc" <?php echo ($current_sort === 'rating' && $current_order === 'desc') ? 'selected' : ''; ?>>Highest Rated</option>
+                                <option value="rating-asc" <?php echo ($current_sort === 'rating' && $current_order === 'asc') ? 'selected' : ''; ?>>Lowest Rated</option>
+                                <option value="annual_fee-asc" <?php echo ($current_sort === 'annual_fee' && $current_order === 'asc') ? 'selected' : ''; ?>>Lowest Fee</option>
+                                <option value="annual_fee-desc" <?php echo ($current_sort === 'annual_fee' && $current_order === 'desc') ? 'selected' : ''; ?>>Highest Fee</option>
+                                <option value="review_count-desc" <?php echo ($current_sort === 'review_count' && $current_order === 'desc') ? 'selected' : ''; ?>>Most Popular</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <?php if ($credit_cards->have_posts()): ?>
+                        <!-- Cards List -->
+                        <div class="ccm-cards-list">
+                            <?php while ($credit_cards->have_posts()): $credit_cards->the_post();
+                                $post_id = get_the_ID();
+                                $card_image = has_post_thumbnail() ? get_the_post_thumbnail_url($post_id, 'medium') : '';
+                                $rating = ccm_get_meta($post_id, 'rating', 0, true);
+                                $review_count = ccm_get_meta($post_id, 'review_count', 0, true);
+                                $annual_fee = ccm_format_currency(ccm_get_meta($post_id, 'annual_fee', 'N/A'));
+                                $cashback_rate = ccm_get_meta($post_id, 'cashback_rate', 'N/A');
+                                $welcome_bonus = ccm_get_meta($post_id, 'welcome_bonus', 'N/A');
+                                $apply_link = ccm_get_meta($post_id, 'apply_link', get_permalink());
+                                $featured = (bool) ccm_get_meta($post_id, 'featured', false);
+                                $trending = (bool) ccm_get_meta($post_id, 'trending', false);
+                                $bank_terms = get_the_terms($post_id, 'store');
+                                $bank_name = !is_wp_error($bank_terms) && !empty($bank_terms) ? $bank_terms[0]->name : '';
+                                $pros = ccm_get_meta($post_id, 'pros', [], false, true);
+                                $categories = get_the_terms($post_id, 'card-category');
+                            ?>
+                            <article class="ccm-card-horizontal" data-id="<?php echo esc_attr($post_id); ?>">
+                                <div class="ccm-card-image-wrapper">
+                                    <?php if (!empty($card_image)): ?>
+                                        <img src="<?php echo esc_url($card_image); ?>"
+                                             alt="<?php the_title(); ?>"
+                                             class="ccm-card-img"
+                                             loading="lazy">
+                                    <?php endif; ?>
+                                </div>
+
+                                <div class="ccm-card-body">
+                                    <div class="ccm-card-header-inline">
+                                        <div>
+                                            <h3 class="ccm-card-title-inline"><a href="<?php the_permalink(); ?>" title="<?php the_title_attribute(); ?>"><?php the_title(); ?></a></h3>
+                                            <?php if ($rating > 0): ?>
+                                                <div class="ccm-card-rating-inline">
+                                                    <span class="ccm-rating-value"><?php echo esc_html($rating); ?>/5</span>
+                                                    <span class="ccm-rating-stars-inline"><?php echo str_repeat('⭐', floor($rating)); ?></span>
+                                                    <?php if ($review_count > 0): ?>
+                                                        <span class="ccm-review-count">(<?php echo esc_html($review_count); ?> reviews)</span>
+                                                    <?php endif; ?>
+                                                </div>
+                                            <?php endif; ?>
+                                        </div>
+                                        <div class="ccm-card-badges-inline">
+                                            <?php if (!is_wp_error($categories) && !empty($categories)): ?>
+                                                <?php foreach (array_slice($categories, 0, 3) as $cat): ?>
+                                                    <span class="ccm-category-badge"><?php echo esc_html($cat->name); ?></span>
+                                                <?php endforeach; ?>
+                                            <?php endif; ?>
+                                        </div>
+                                    </div>
+
+                                    <?php if (!empty($pros) && is_array($pros)): ?>
+                                        <ul class="ccm-card-features-list">
+                                            <?php foreach (array_slice($pros, 0, 4) as $pro): ?>
+                                                <li>
+                                                    <span class="ccm-feature-icon-inline">✓</span>
+                                                    <?php echo esc_html($pro); ?>
+                                                </li>
+                                            <?php endforeach; ?>
+                                        </ul>
+                                    <?php endif; ?>
+
+                                    <div class="ccm-card-meta-inline">
+                                        <div class="ccm-meta-item">
+                                            <span class="ccm-meta-label">Joining Fee:</span>
+                                            <span class="ccm-meta-value"><?php echo esc_html($annual_fee); ?></span>
+                                        </div>
+                                        <div class="ccm-meta-item">
+                                            <span class="ccm-meta-label">Annual/Renewal Fee:</span>
+                                            <span class="ccm-meta-value"><?php echo esc_html($annual_fee); ?></span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="ccm-card-actions-inline">
+                                    <a href="<?php the_permalink(); ?>" class="ccm-btn ccm-btn-outline">Read More</a>
+                                    <a href="<?php echo esc_url($apply_link); ?>" class="ccm-btn ccm-btn-primary" target="_blank" rel="noopener">Check Eligibility ></a>
+                                </div>
+
+                                <label class="ccm-compare-label">
+                                    <input type="checkbox" class="ccm-compare-checkbox" data-id="<?php echo esc_attr($post_id); ?>">
+                                    <span>Compare</span>
+                                </label>
+                            </article>
+                            <?php endwhile; wp_reset_postdata(); ?>
+                        </div>
+
+                        <!-- Load More Button -->
+                        <?php if ($credit_cards->found_posts > $credit_cards->post_count): ?>
+                        <div class="ccm-load-more-container">
+                            <button id="ccm-load-more-btn" class="ccm-btn ccm-btn-primary ccm-btn-large" data-page="2" data-loading="false">
+                                Load More Cards
+                                <span class="ccm-loading-spinner" style="display: none;">⟳</span>
+                            </button>
+                            <div id="ccm-load-more-message" style="display: none; margin-top: 1rem; text-align: center; color: #666;">
+                                No more cards to load
+                            </div>
+                        </div>
+                        <?php endif; ?>
+
+                    <?php else: ?>
+                        <!-- No Results -->
+                        <div class="ccm-no-results">
+                            <div class="ccm-no-results-icon">🔍</div>
+                            <h3>No credit cards found</h3>
+                            <p>Try adjusting your filters or browse all available cards.</p>
+                            <a href="<?php echo get_post_type_archive_link('credit-card'); ?>" class="ccm-btn ccm-btn-primary">View All Cards</a>
+                        </div>
+                    <?php endif; ?>
+                </main>
+            </div>
+        </div>
+    </div>
+
+
+
+    <!-- Mobile Filter Modal -->
+    <div class="ccm-filter-modal" id="filter-modal">
+        <div class="ccm-filter-modal-overlay" id="filter-modal-overlay"></div>
+        <div class="ccm-filter-modal-content">
+            <div class="ccm-filter-modal-header">
+                <h2>Filters</h2>
+                <button type="button" class="ccm-modal-close" id="close-filter-modal">✕</button>
+            </div>
+            <div class="ccm-filter-modal-body">
+                <form class="ccm-filters-form" method="get" action="<?php echo get_post_type_archive_link('credit-card'); ?>" id="mobile-filter-form">
                     <?php if (!empty($filters['banks'])): ?>
                     <div class="ccm-filter-group">
-                        <label class="ccm-filter-label" for="bank">Bank/Issuer</label>
-                        <select class="ccm-filter-select" name="bank" id="bank">
-                            <option value="">All Banks</option>
+                        <h3 class="ccm-filter-label">BANKS</h3>
+                        <div class="ccm-filter-options">
                             <?php foreach ($filters['banks'] as $bank): ?>
-                                <option value="<?php echo esc_attr($bank['slug']); ?>" <?php selected($current_bank, $bank['slug']); ?>>
-                                    <?php echo esc_html($bank['name']); ?> (<?php echo esc_html($bank['count']); ?>)
-                                </option>
+                            <label class="ccm-checkbox-label">
+                                <input type="checkbox" name="bank[]" value="<?php echo esc_attr($bank['slug']); ?>" <?php checked(in_array($bank['slug'], (array)$current_bank)); ?>>
+                                <span class="ccm-checkbox-text"><?php echo esc_html($bank['name']); ?></span>
+                            </label>
                             <?php endforeach; ?>
-                        </select>
-                    </div>
-                    <?php endif; ?>
-
-                    <?php if (!empty($filters['network_types'])): ?>
-                    <div class="ccm-filter-group">
-                        <label class="ccm-filter-label" for="network_type">Network Type</label>
-                        <select class="ccm-filter-select" name="network_type" id="network_type">
-                            <option value="">All Networks</option>
-                            <?php foreach ($filters['network_types'] as $network): ?>
-                                <option value="<?php echo esc_attr($network['slug']); ?>" <?php selected($current_network, $network['slug']); ?>>
-                                    <?php echo esc_html($network['name']); ?> (<?php echo esc_html($network['count']); ?>)
-                                </option>
-                            <?php endforeach; ?>
-                        </select>
+                        </div>
                     </div>
                     <?php endif; ?>
 
                     <?php if (!empty($filters['categories'])): ?>
                     <div class="ccm-filter-group">
-                        <label class="ccm-filter-label" for="category">Category</label>
-                        <select class="ccm-filter-select" name="category" id="category">
-                            <option value="">All Categories</option>
+                        <h3 class="ccm-filter-label">CATEGORIES</h3>
+                        <div class="ccm-filter-options">
                             <?php foreach ($filters['categories'] as $category): ?>
-                                <option value="<?php echo esc_attr($category['slug']); ?>" <?php selected($current_category, $category['slug']); ?>>
-                                    <?php echo esc_html($category['name']); ?> (<?php echo esc_html($category['count']); ?>)
-                                </option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
-                    <?php endif; ?>
-
-                    <?php if (!empty($filters['rating_ranges'])): ?>
-                    <div class="ccm-filter-group">
-                        <label class="ccm-filter-label" for="min_rating">Minimum Rating</label>
-                        <select class="ccm-filter-select" name="min_rating" id="min_rating">
-                            <option value="">Any Rating</option>
-                            <?php foreach ($filters['rating_ranges'] as $range): ?>
-                                <option value="<?php echo esc_attr($range['min']); ?>" <?php selected($current_min_rating, $range['min']); ?>>
-                                    <?php echo esc_html($range['label']); ?>
-                                </option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
-                    <?php endif; ?>
-
-                    <?php if (!empty($filters['fee_ranges'])): ?>
-                    <div class="ccm-filter-group">
-                        <label class="ccm-filter-label" for="max_annual_fee">Max Annual Fee</label>
-                        <select class="ccm-filter-select" name="max_annual_fee" id="max_annual_fee">
-                            <option value="">Any Fee</option>
-                            <?php foreach ($filters['fee_ranges'] as $range): ?>
-                                <option value="<?php echo esc_attr($range['max']); ?>" <?php selected($current_max_fee, $range['max']); ?>>
-                                    <?php echo esc_html($range['label']); ?>
-                                </option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
-                    <?php endif; ?>
-
-                    <div class="ccm-filter-group">
-                        <label class="ccm-filter-label" for="featured">Card Type</label>
-                        <select class="ccm-filter-select" name="featured" id="featured">
-                            <option value="">All Cards</option>
-                            <option value="1" <?php selected($current_featured, '1'); ?>>Featured Cards</option>
-                            <option value="0" <?php selected($current_featured, '0'); ?>>Regular Cards</option>
-                        </select>
-                    </div>
-                </div>
-
-                <div class="ccm-filter-actions">
-                    <button type="reset" class="ccm-btn ccm-btn-secondary">Reset Filters</button>
-                    <button type="submit" class="ccm-btn ccm-btn-primary">🔍 Apply Filters</button>
-                </div>
-            </form>
-        </div>
-    </section>
-
-    <!-- Results Section -->
-    <section class="ccm-results-section">
-        <div class="ccm-container">
-            <!-- Results Bar -->
-            <div class="ccm-results-bar">
-                <div class="ccm-results-info">
-                    <div class="ccm-results-count">
-                        <strong><?php echo number_format($credit_cards->found_posts); ?></strong> credit cards found
-                    </div>
-                    <div class="ccm-active-filters">
-                        <?php if ($current_bank): ?>
-                            <span class="ccm-filter-tag">Bank: <?php echo esc_html($current_bank); ?></span>
-                        <?php endif; ?>
-                        <?php if ($current_category): ?>
-                            <span class="ccm-filter-tag">Category: <?php echo esc_html($current_category); ?></span>
-                        <?php endif; ?>
-                        <?php if ($current_min_rating): ?>
-                            <span class="ccm-filter-tag">Rating: <?php echo esc_html($current_min_rating); ?>+</span>
-                        <?php endif; ?>
-                    </div>
-                </div>
-
-                <div class="ccm-sort-controls">
-                    <span class="ccm-sort-label">Sort by:</span>
-                    <select class="ccm-sort-select" id="sort-select" onchange="ccmUpdateSort(this.value)">
-                        <option value="date-desc" <?php echo ($current_sort === 'date' && $current_order === 'desc') ? 'selected' : ''; ?>>Newest First</option>
-                        <option value="rating-desc" <?php echo ($current_sort === 'rating' && $current_order === 'desc') ? 'selected' : ''; ?>>Highest Rated</option>
-                        <option value="rating-asc" <?php echo ($current_sort === 'rating' && $current_order === 'asc') ? 'selected' : ''; ?>>Lowest Rated</option>
-                        <option value="annual_fee-asc" <?php echo ($current_sort === 'annual_fee' && $current_order === 'asc') ? 'selected' : ''; ?>>Lowest Fee</option>
-                        <option value="annual_fee-desc" <?php echo ($current_sort === 'annual_fee' && $current_order === 'desc') ? 'selected' : ''; ?>>Highest Fee</option>
-                        <option value="review_count-desc" <?php echo ($current_sort === 'review_count' && $current_order === 'desc') ? 'selected' : ''; ?>>Most Popular</option>
-                    </select>
-                </div>
-            </div>
-
-            <?php if ($credit_cards->have_posts()): ?>
-                <!-- Cards Grid - Optimized for LCP -->
-                <div class="ccm-cards-grid">
-                    <?php while ($credit_cards->have_posts()): $credit_cards->the_post();
-                        $post_id = get_the_ID();
-                        $card_image = has_post_thumbnail() ? get_the_post_thumbnail_url($post_id, 'medium') : '';
-                        $rating = ccm_get_meta($post_id, 'rating', 0, true);
-                        $review_count = ccm_get_meta($post_id, 'review_count', 0, true);
-                        $annual_fee = ccm_format_currency(ccm_get_meta($post_id, 'annual_fee', 'N/A'));
-                        $cashback_rate = ccm_get_meta($post_id, 'cashback_rate', 'N/A');
-                        $welcome_bonus = ccm_get_meta($post_id, 'welcome_bonus', 'N/A');
-                        $apply_link = ccm_get_meta($post_id, 'apply_link', get_permalink());
-                        $featured = (bool) ccm_get_meta($post_id, 'featured', false);
-                        $trending = (bool) ccm_get_meta($post_id, 'trending', false);
-                        $bank_terms = get_the_terms($post_id, 'store');
-                        $bank_name = !is_wp_error($bank_terms) && !empty($bank_terms) ? $bank_terms[0]->name : '';
-                        $pros = ccm_get_meta($post_id, 'pros', [], false, true);
-                    ?>
-                    <article class="ccm-card" data-id="<?php echo esc_attr($post_id); ?>">
-                        <?php if ($featured): ?>
-                            <span class="ccm-badge ccm-badge-featured">⭐ Featured</span>
-                        <?php endif; ?>
-
-                        <?php if ($trending): ?>
-                            <span class="ccm-badge ccm-badge-trending">🔥 Trending</span>
-                        <?php endif; ?>
-
-                        <header class="ccm-card-header">
-                            <?php if (!empty($card_image)): ?>
-                                <img src="<?php echo esc_url($card_image); ?>"
-                                     alt="<?php the_title(); ?>"
-                                     class="ccm-card-image"
-                                     loading="lazy"
-                                     width="120"
-                                     height="auto">
-                            <?php endif; ?>
-
-                            <h3 class="ccm-card-title"><?php the_title(); ?></h3>
-
-                            <?php if (!empty($bank_name)): ?>
-                                <div class="ccm-card-bank"><?php echo esc_html($bank_name); ?></div>
-                            <?php endif; ?>
-
-                            <?php if ($rating > 0): ?>
-                                <div class="ccm-card-rating">
-                                    <div class="ccm-rating-stars">
-                                        <?php echo str_repeat('⭐', floor($rating)); ?>
-                                    </div>
-                                    <span class="ccm-rating-text">
-                                        <?php echo esc_html($rating); ?>/5
-                                        <?php if ($review_count > 0): ?>
-                                            (<?php echo esc_html($review_count); ?> reviews)
-                                        <?php endif; ?>
-                                    </span>
-                                </div>
-                            <?php endif; ?>
-                        </header>
-
-                        <div class="ccm-card-content">
-                            <div class="ccm-card-highlights">
-                                <div class="ccm-highlight">
-                                    <span class="ccm-highlight-label">Annual Fee</span>
-                                    <span class="ccm-highlight-value"><?php echo esc_html($annual_fee); ?></span>
-                                </div>
-                                <div class="ccm-highlight">
-                                    <span class="ccm-highlight-label">Rewards</span>
-                                    <span class="ccm-highlight-value"><?php echo esc_html($cashback_rate); ?></span>
-                                </div>
-                            </div>
-
-                            <?php if (!empty($pros) && is_array($pros)): ?>
-                                <div class="ccm-card-features">
-                                    <?php foreach (array_slice($pros, 0, 2) as $pro): ?>
-                                        <div class="ccm-feature-item">
-                                            <span class="ccm-feature-icon">✓</span>
-                                            <span class="ccm-feature-text"><?php echo esc_html($pro); ?></span>
-                                        </div>
-                                    <?php endforeach; ?>
-                                </div>
-                            <?php endif; ?>
-
-                            <div class="ccm-card-actions">
-                                <a href="<?php the_permalink(); ?>" class="ccm-btn ccm-btn-secondary">Details</a>
-                                <a href="<?php echo esc_url($apply_link); ?>" class="ccm-btn ccm-btn-primary" target="_blank" rel="noopener">Apply Now</a>
-                            </div>
-
-                            <label class="ccm-compare-label">
-                                <input type="checkbox" class="ccm-compare-checkbox" data-id="<?php echo esc_attr($post_id); ?>">
-                                <span>Compare this card</span>
+                            <label class="ccm-checkbox-label">
+                                <input type="checkbox" name="category[]" value="<?php echo esc_attr($category['slug']); ?>" <?php checked(in_array($category['slug'], (array)$current_category)); ?>>
+                                <span class="ccm-checkbox-text"><?php echo esc_html($category['name']); ?></span>
                             </label>
+                            <?php endforeach; ?>
                         </div>
-                    </article>
-                    <?php endwhile; wp_reset_postdata(); ?>
-                </div>
-
-                <!-- Load More Button -->
-                <?php if ($credit_cards->found_posts > $credit_cards->post_count): ?>
-                <div class="ccm-load-more-container">
-                    <button id="ccm-load-more-btn" class="ccm-btn ccm-btn-primary ccm-btn-large" data-page="2" data-loading="false">
-                        Load More Cards
-                        <span class="ccm-loading-spinner" style="display: none;">⟳</span>
-                    </button>
-                    <div id="ccm-load-more-message" style="display: none; margin-top: 1rem; text-align: center; color: #666;">
-                        No more cards to load
                     </div>
-                </div>
-                <?php endif; ?>
+                    <?php endif; ?>
 
-            <?php else: ?>
-                <!-- No Results -->
-                <div class="ccm-no-results">
-                    <div class="ccm-no-results-icon">🔍</div>
-                    <h3>No credit cards found</h3>
-                    <p>Try adjusting your filters or browse all available cards.</p>
-                    <a href="<?php echo get_post_type_archive_link('credit-card'); ?>" class="ccm-btn ccm-btn-primary">View All Cards</a>
-                </div>
-            <?php endif; ?>
+                    <?php if (!empty($filters['network_types'])): ?>
+                    <div class="ccm-filter-group">
+                        <h3 class="ccm-filter-label">NETWORK TYPE</h3>
+                        <div class="ccm-filter-options">
+                            <?php foreach ($filters['network_types'] as $network): ?>
+                            <label class="ccm-checkbox-label">
+                                <input type="checkbox" name="network_type[]" value="<?php echo esc_attr($network['slug']); ?>" <?php checked(in_array($network['slug'], (array)$current_network)); ?>>
+                                <span class="ccm-checkbox-text"><?php echo esc_html($network['name']); ?></span>
+                            </label>
+                            <?php endforeach; ?>
+                        </div>
+                    </div>
+                    <?php endif; ?>
+                </form>
+            </div>
+            <div class="ccm-filter-modal-footer">
+                <button type="button" class="ccm-btn ccm-btn-secondary" id="modal-clear-filters">Clear All</button>
+                <button type="submit" form="mobile-filter-form" class="ccm-btn ccm-btn-primary">Apply Filters</button>
+            </div>
         </div>
-    </section>
+    </div>
 
     <!-- SEO Content Section -->
     <!-- <section class="ccm-seo-section">
@@ -529,10 +668,10 @@ if ($current_page > 1) {
 
             <div class="ccm-blogs-grid">
                 <?php
-                // Fetch random 3 posts from credit-card-bill-payment-offers category
+                // Fetch random 6 posts from credit-card-bill-payment-offers category
                 $blog_args = [
                     'post_type' => 'post',
-                    'posts_per_page' => 3,
+                    'posts_per_page' => 6,
                     'post_status' => 'publish',
                     'orderby' => 'rand',
                     'category_name' => 'credit-card-bill-payment-offers' // Fetch from specific category
@@ -623,6 +762,15 @@ if ($current_page > 1) {
         </div>
     </section>
 
+    <!-- Mobile Filter Button -->
+    <button class="ccm-mobile-filter-btn" id="mobile-filter-btn">
+        <svg class="ccm-filter-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 2C13.1 2 14 2.9 14 4C14 5.1 13.1 6 12 6C10.9 6 10 5.1 10 4C10 2.9 10.9 2 12 2ZM21 9V7L15 1H5C3.89 1 3 1.89 3 3V21C3 22.11 3.89 23 5 23H19C20.11 23 21 22.11 21 21V9M19 9H14V4H5V21H19V9Z" fill="currentColor"/>
+        </svg>
+        <span>Filters</span>
+        <span class="ccm-filter-count" id="mobile-filter-count" style="display: none;">0</span>
+    </button>
+
     <!-- Comparison Bar -->
     <div class="ccm-comparison-bar" id="comparison-bar">
         <div class="ccm-comparison-content">
@@ -640,18 +788,115 @@ if ($current_page > 1) {
 
 <script>
 (function() {
-    // Filter toggle functionality
-    const toggleBtn = document.getElementById('toggle-filters');
-    const filterContent = document.getElementById('filter-content');
-    const toggleText = document.getElementById('toggle-text');
+    // Mobile Filter Modal functionality
+    const mobileFilterBtn = document.getElementById('mobile-filter-btn');
+    const filterModal = document.getElementById('filter-modal');
+    const filterModalOverlay = document.getElementById('filter-modal-overlay');
+    const closeFilterModal = document.getElementById('close-filter-modal');
+    const mobileFilterCount = document.getElementById('mobile-filter-count');
 
-    if (toggleBtn && filterContent && toggleText) {
-        toggleBtn.addEventListener('click', function() {
-            const isVisible = filterContent.style.display !== 'none';
-            filterContent.style.display = isVisible ? 'none' : 'grid';
-            toggleText.textContent = isVisible ? 'Show Filters' : 'Hide Filters';
+    if (mobileFilterBtn && filterModal) {
+        // Open modal
+        mobileFilterBtn.addEventListener('click', function() {
+            filterModal.classList.add('active');
+            document.body.style.overflow = 'hidden';
+        });
+
+        // Close modal
+        function closeModal() {
+            filterModal.classList.remove('active');
+            document.body.style.overflow = '';
+        }
+
+        if (closeFilterModal) {
+            closeFilterModal.addEventListener('click', closeModal);
+        }
+
+        if (filterModalOverlay) {
+            filterModalOverlay.addEventListener('click', closeModal);
+        }
+
+        // Close on ESC key
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape' && filterModal.classList.contains('active')) {
+                closeModal();
+            }
         });
     }
+
+    // Clear all filters functionality
+    const clearAllButtons = document.querySelectorAll('#clear-all-filters, #modal-clear-filters');
+    clearAllButtons.forEach(btn => {
+        if (btn) {
+            btn.addEventListener('click', function() {
+                // Uncheck all checkboxes
+                document.querySelectorAll('.ccm-filters-form input[type="checkbox"]').forEach(checkbox => {
+                    checkbox.checked = false;
+                });
+                // Update filter count
+                updateFilterCount();
+            });
+        }
+    });
+
+    // Update filter count badge - count unique applied filters
+    function updateFilterCount() {
+        // Count unique applied filters by checking URL parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        let appliedFilters = 0;
+
+        // Count bank filters
+        const bankFilters = urlParams.getAll('bank[]');
+        if (bankFilters.length > 0) appliedFilters += bankFilters.length;
+
+        // Count category filters
+        const categoryFilters = urlParams.getAll('category[]');
+        if (categoryFilters.length > 0) appliedFilters += categoryFilters.length;
+
+        // Count network filters
+        const networkFilters = urlParams.getAll('network_type[]');
+        if (networkFilters.length > 0) appliedFilters += networkFilters.length;
+
+        // Count other filters
+        if (urlParams.get('min_rating')) appliedFilters++;
+        if (urlParams.get('max_annual_fee')) appliedFilters++;
+        if (urlParams.get('featured')) appliedFilters++;
+        if (urlParams.get('trending')) appliedFilters++;
+
+        if (mobileFilterCount) {
+            if (appliedFilters > 0) {
+                mobileFilterCount.textContent = appliedFilters;
+                mobileFilterCount.style.display = 'inline-block';
+            } else {
+                mobileFilterCount.style.display = 'none';
+            }
+        }
+    }
+
+    // Listen for filter changes
+    document.querySelectorAll('.ccm-filters-form input[type="checkbox"]').forEach(checkbox => {
+        checkbox.addEventListener('change', updateFilterCount);
+    });
+
+    // Initialize filter count on page load
+    updateFilterCount();
+
+    // Show more functionality for filter groups
+    document.querySelectorAll('.ccm-show-more').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const target = this.getAttribute('data-target');
+            const filterGroup = this.closest('.ccm-filter-group');
+            const allOptions = filterGroup.querySelectorAll('.ccm-filter-options label');
+
+            // Show all options
+            allOptions.forEach(option => {
+                option.style.display = 'block';
+            });
+
+            // Hide the show more button
+            this.style.display = 'none';
+        });
+    });
 
     // Sort functionality
     window.ccmUpdateSort = function(value) {
@@ -764,9 +1009,9 @@ if ($current_page > 1) {
     // Load More functionality
     const loadMoreBtn = document.getElementById('ccm-load-more-btn');
     const loadMoreMessage = document.getElementById('ccm-load-more-message');
-    const cardsGrid = document.querySelector('.ccm-cards-grid');
+    const cardsList = document.querySelector('.ccm-cards-list');
 
-    if (loadMoreBtn && cardsGrid) {
+    if (loadMoreBtn && cardsList) {
         loadMoreBtn.addEventListener('click', function() {
             const currentPage = parseInt(this.getAttribute('data-page'));
             const isLoading = this.getAttribute('data-loading') === 'true';
@@ -778,15 +1023,36 @@ if ($current_page > 1) {
             this.innerHTML = 'Loading... <span class="ccm-loading-spinner">⟳</span>';
             this.disabled = true;
 
+            // Get current URL parameters (includes sort and filter parameters)
+            const urlParams = new URLSearchParams(window.location.search);
+            const sortBy = urlParams.get('sort_by') || 'date';
+            const sortOrder = urlParams.get('sort_order') || 'desc';
+
+            // Build query string with all current parameters
+            const queryParams = new URLSearchParams();
+            queryParams.set('page', currentPage);
+            queryParams.set('per_page', '8');
+            queryParams.set('sort_by', sortBy);
+            queryParams.set('sort_order', sortOrder);
+
+            // Add filter parameters if they exist
+            urlParams.forEach((value, key) => {
+                if (key !== 'page' && key !== 'per_page' && key !== 'sort_by' && key !== 'sort_order') {
+                    // Handle array parameters (multiple values)
+                    const values = urlParams.getAll(key);
+                    values.forEach(val => queryParams.append(key, val));
+                }
+            });
+
             // Make AJAX request
-            fetch(`${window.location.origin}/wp-json/ccm/v1/credit-cards?page=${currentPage}&per_page=8&orderby=date&order=desc`)
+            fetch(`${window.location.origin}/wp-json/ccm/v1/credit-cards?${queryParams.toString()}`)
                 .then(response => response.json())
                 .then(data => {
                     if (data.data && data.data.length > 0) {
-                        // Append new cards to grid
+                        // Append new cards to list
                         data.data.forEach(card => {
                             const cardHTML = createCardHTML(card);
-                            cardsGrid.insertAdjacentHTML('beforeend', cardHTML);
+                            cardsList.insertAdjacentHTML('beforeend', cardHTML);
                         });
 
                         // Update button for next page
@@ -818,51 +1084,59 @@ if ($current_page > 1) {
 
     // Helper function to create card HTML
     function createCardHTML(card) {
-        const featuredBadge = card.featured ? '<span class="ccm-badge ccm-badge-featured">⭐ Featured</span>' : '';
-        const trendingBadge = card.trending ? '<span class="ccm-badge ccm-badge-trending">🔥 Trending</span>' : '';
-
         const ratingStars = card.rating > 0 ? '⭐'.repeat(Math.floor(card.rating)) : '';
         const ratingText = card.rating > 0 ? `${card.rating}/5${card.review_count > 0 ? ` (${card.review_count} reviews)` : ''}` : '';
 
         const pros = card.pros && card.pros.length > 0 ?
-            card.pros.slice(0, 2).map(pro => `<div class="ccm-feature-item"><span class="ccm-feature-icon">✓</span><span class="ccm-feature-text">${pro}</span></div>`).join('') : '';
+            card.pros.slice(0, 4).map(pro => `<li><span class="ccm-feature-icon-inline">✓</span>${pro}</li>`).join('') : '';
 
         return `
-            <article class="ccm-card" data-id="${card.id}">
-                ${featuredBadge}
-                ${trendingBadge}
-                <header class="ccm-card-header">
-                    ${card.card_image ? `<img src="${card.card_image}" alt="${card.title}" class="ccm-card-image" loading="lazy" width="120" height="auto">` : ''}
-                    <h3 class="ccm-card-title">${card.title}</h3>
-                    ${card.bank ? `<div class="ccm-card-bank">${card.bank.name}</div>` : ''}
-                    ${card.rating > 0 ? `
-                        <div class="ccm-card-rating">
-                            <div class="ccm-rating-stars">${ratingStars}</div>
-                            <span class="ccm-rating-text">${ratingText}</span>
-                        </div>
-                    ` : ''}
-                </header>
-                <div class="ccm-card-content">
-                    <div class="ccm-card-highlights">
-                        <div class="ccm-highlight">
-                            <span class="ccm-highlight-label">Annual Fee</span>
-                            <span class="ccm-highlight-value">${card.annual_fee || 'N/A'}</span>
-                        </div>
-                        <div class="ccm-highlight">
-                            <span class="ccm-highlight-label">Rewards</span>
-                            <span class="ccm-highlight-value">${card.cashback_rate || 'N/A'}</span>
-                        </div>
-                    </div>
-                    ${pros ? `<div class="ccm-card-features">${pros}</div>` : ''}
-                    <div class="ccm-card-actions">
-                        <a href="${card.link}" class="ccm-btn ccm-btn-secondary">Details</a>
-                        <a href="${card.apply_link || card.link}" class="ccm-btn ccm-btn-primary" target="_blank" rel="noopener">Apply Now</a>
-                    </div>
-                    <label class="ccm-compare-label">
-                        <input type="checkbox" class="ccm-compare-checkbox" data-id="${card.id}">
-                        <span>Compare this card</span>
-                    </label>
+            <article class="ccm-card-horizontal" data-id="${card.id}">
+                <div class="ccm-card-image-wrapper">
+                    ${card.card_image ? `<img src="${card.card_image}" alt="${card.title}" class="ccm-card-img" loading="lazy">` : ''}
                 </div>
+
+                <div class="ccm-card-body">
+                    <div class="ccm-card-header-inline">
+                        <div>
+                            <h3 class="ccm-card-title-inline">${card.title}</h3>
+                            ${card.rating > 0 ? `
+                                <div class="ccm-card-rating-inline">
+                                    <span class="ccm-rating-value">${card.rating}/5</span>
+                                    <span class="ccm-rating-stars-inline">${ratingStars}</span>
+                                    ${card.review_count > 0 ? `<span class="ccm-review-count">(${card.review_count} reviews)</span>` : ''}
+                                </div>
+                            ` : ''}
+                        </div>
+                        <div class="ccm-card-badges-inline">
+                            ${card.featured ? '<span class="ccm-category-badge">Featured</span>' : ''}
+                            ${card.trending ? '<span class="ccm-category-badge">Trending</span>' : ''}
+                        </div>
+                    </div>
+
+                    ${pros ? `<ul class="ccm-card-features-list">${pros}</ul>` : ''}
+
+                    <div class="ccm-card-meta-inline">
+                        <div class="ccm-meta-item">
+                            <span class="ccm-meta-label">Joining Fee:</span>
+                            <span class="ccm-meta-value">${card.annual_fee || 'N/A'}</span>
+                        </div>
+                        <div class="ccm-meta-item">
+                            <span class="ccm-meta-label">Annual/Renewal Fee:</span>
+                            <span class="ccm-meta-value">${card.annual_fee || 'N/A'}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="ccm-card-actions-inline">
+                    <a href="${card.link}" class="ccm-btn ccm-btn-outline">Read More</a>
+                    <a href="${card.apply_link || card.link}" class="ccm-btn ccm-btn-primary" target="_blank" rel="noopener">Check Eligibility ></a>
+                </div>
+
+                <label class="ccm-compare-label">
+                    <input type="checkbox" class="ccm-compare-checkbox" data-id="${card.id}">
+                    <span>Compare</span>
+                </label>
             </article>
         `;
     }

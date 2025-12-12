@@ -1,0 +1,333 @@
+/* ==========================================================================
+   Mobile Filter Modal and Responsive Styles
+   ========================================================================== */
+
+/* Mobile Filter Button */
+.ccm-mobile-filter-btn {
+    display: none;
+    /* Hidden on desktop */
+    position: fixed;
+    bottom: var(--space-6);
+    right: var(--space-6);
+    background: var(--gradient-primary);
+    color: white;
+    border: none;
+    border-radius: var(--radius-xl);
+    padding: var(--space-4) var(--space-6);
+    font-size: var(--font-size-sm);
+    font-weight: 700;
+    cursor: pointer;
+    z-index: 999;
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+}
+
+.ccm-mobile-filter-btn:active {
+    transform: translateY(0);
+}
+
+
+
+.ccm-filter-icon {
+    font-size: var(--font-size-lg);
+}
+
+.ccm-filter-count {
+    background: var(--brand-secondary);
+    color: white;
+    font-size: var(--font-size-xs);
+    font-weight: 700;
+    padding: var(--space-1) var(--space-2);
+    border-radius: var(--radius-sm);
+    min-width: 20px;
+    text-align: center;
+}
+
+/* Filter Modal */
+.ccm-filter-modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 1000;
+}
+
+.ccm-filter-modal.active {
+    display: block;
+}
+
+.ccm-filter-modal-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+    animation: fadeIn 0.3s ease;
+}
+
+.ccm-filter-modal-content {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    max-height: 85vh;
+    background: white;
+    border-radius: var(--radius-2xl) var(--radius-2xl) 0 0;
+    display: flex;
+    flex-direction: column;
+    animation: slideUp 0.3s ease;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes slideUp {
+    from {
+        transform: translateY(100%);
+    }
+
+    to {
+        transform: translateY(0);
+    }
+}
+
+.ccm-filter-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--space-6);
+    border-bottom: 2px solid var(--neutral-100);
+}
+
+.ccm-filter-modal-header h2 {
+    font-size: var(--font-size-xl);
+    font-weight: 700;
+    color: var(--neutral-900);
+    margin: 0;
+}
+
+.ccm-modal-close {
+    background: none;
+    border: none;
+    font-size: var(--font-size-2xl);
+    color: var(--neutral-600);
+    cursor: pointer;
+    padding: var(--space-2);
+    line-height: 1;
+}
+
+.ccm-filter-modal-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: var(--space-6);
+}
+
+.ccm-filter-modal-footer {
+    display: flex;
+    gap: var(--space-3);
+    padding: var(--space-6);
+    border-top: 2px solid var(--neutral-100);
+    background: var(--neutral-50);
+}
+
+.ccm-filter-modal-footer .ccm-btn {
+    flex: 1;
+}
+
+
+
+/* Responsive Styles */
+@media (max-width: 1024px) {
+    .ccm-layout-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .ccm-sidebar-filters {
+        display: none;
+        /* Hide sidebar on tablet and mobile */
+    }
+
+    .ccm-mobile-filter-btn {
+        display: flex;
+        /* Show floating mobile filter button */
+    }
+
+    .ccm-card-horizontal {
+        grid-template-columns: 100px 1fr;
+        gap: var(--space-4);
+        padding: var(--space-4);
+    }
+
+    .ccm-card-image-wrapper {
+        width: 100px;
+        height: 70px;
+    }
+
+    .ccm-card-actions-inline {
+        grid-column: 1 / -1;
+        flex-direction: row;
+        align-self: stretch;
+        position: static;
+        margin-top: var(--space-4);
+        gap: var(--space-3);
+    }
+
+    .ccm-card-actions-inline .ccm-btn {
+        flex: 1;
+        padding: var(--space-3) var(--space-4);
+    }
+
+    .ccm-card-features-list {
+        grid-template-columns: 1fr;
+    }
+
+    .ccm-card-meta-inline {
+        flex-direction: column;
+        gap: var(--space-3);
+    }
+}
+
+@media (max-width: 768px) {
+    .ccm-page-title {
+        font-size: var(--font-size-2xl);
+    }
+
+    .ccm-results-bar {
+        flex-direction: column;
+        align-items: stretch;
+        gap: var(--space-4);
+    }
+
+    .ccm-sort-controls {
+        justify-content: space-between;
+    }
+
+    .ccm-sort-select {
+        min-width: auto;
+        flex: 1;
+    }
+
+    .ccm-card-horizontal {
+        grid-template-columns: 1fr;
+        gap: var(--space-4);
+    }
+
+    .ccm-card-image-wrapper {
+        width: 100%;
+        height: 120px;
+    }
+
+    .ccm-card-header-inline {
+        flex-direction: column;
+        gap: var(--space-3);
+    }
+
+    .ccm-card-badges-inline {
+        order: -1;
+    }
+
+    .ccm-card-features-list {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 480px) {
+    .ccm-main-wrapper {
+        padding: var(--space-4) 0;
+    }
+
+    .ccm-container {
+        padding: 0 var(--space-3);
+    }
+
+    .ccm-breadcrumb {
+        font-size: var(--font-size-xs);
+    }
+
+    .ccm-page-title {
+        font-size: var(--font-size-xl);
+    }
+
+    .ccm-card-horizontal {
+        padding: var(--space-4);
+    }
+
+    .ccm-card-title-inline {
+        font-size: var(--font-size-base);
+    }
+
+    .ccm-card-actions-inline {
+        flex-direction: column;
+    }
+
+    .ccm-card-actions-inline .ccm-btn {
+        padding: var(--space-2) var(--space-4);
+        font-size: var(--font-size-xs);
+    }
+
+    .ccm-mobile-filter-btn {
+        bottom: var(--space-4);
+        right: var(--space-4);
+        padding: var(--space-3) var(--space-5);
+    }
+}
+
+/* No Results */
+.ccm-no-results {
+    text-align: center;
+    padding: var(--space-16) var(--space-6);
+    background: white;
+    border-radius: var(--radius-2xl);
+    border: 1px solid var(--neutral-200);
+}
+
+.ccm-no-results-icon {
+    font-size: 4rem;
+    margin-bottom: var(--space-6);
+}
+
+.ccm-no-results h3 {
+    font-size: var(--font-size-2xl);
+    font-weight: 700;
+    color: var(--neutral-800);
+    margin-bottom: var(--space-3);
+}
+
+.ccm-no-results p {
+    font-size: var(--font-size-lg);
+    color: var(--neutral-600);
+    margin-bottom: var(--space-8);
+}
+
+/* Load More */
+.ccm-load-more-container {
+    text-align: center;
+    margin-top: var(--space-8);
+}
+
+.ccm-loading-spinner {
+    display: inline-block;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
+}

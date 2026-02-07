@@ -1,0 +1,478 @@
+/**
+ * Credit Card Manager - Shortcode Styles (Minimal)
+ */
+
+:root {
+  --cc-primary: #3b82f6;
+  --cc-dark: #1e40af;
+  --cc-white: #fff;
+  --cc-gray-50: #f9fafb;
+  --cc-gray-100: #f3f4f6;
+  --cc-gray-200: #e5e7eb;
+  --cc-gray-300: #d1d5db;
+  --cc-gray-500: #6b7280;
+  --cc-gray-600: #4b5563;
+  --cc-gray-700: #374151;
+  --cc-gray-800: #1f2937;
+  --cc-success: #10b981;
+  --cc-warning: #f59e0b;
+}
+
+/* Single Card */
+.ccm-card.ccm-card-mini,
+.cc-card.cc-card-shortcode-full {
+  background: #fff;
+  border: 1px solid var(--cc-gray-200);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.ccm-card.ccm-card-mini:hover,
+.cc-card.cc-card-shortcode-full:hover {
+  border-color: var(--cc-primary);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.ccm-card-header,
+.cc-card-header {
+  padding: 1rem;
+  background: var(--cc-gray-50);
+  border-bottom: 1px solid var(--cc-gray-200);
+}
+
+.ccm-card-title,
+.cc-card-title {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--cc-gray-800);
+}
+
+.ccm-card-content,
+.cc-card-content {
+  padding: 1rem;
+}
+
+.ccm-highlight {
+  padding: 0.5rem;
+  background: #eff6ff;
+  border-left: 3px solid var(--cc-primary);
+  margin-bottom: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.cc-card-content {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 1rem;
+  padding: 1.5rem;
+}
+
+.cc-card-image {
+  width: 140px;
+  text-align: center;
+}
+
+.cc-card-image img {
+  max-width: 100%;
+  border-radius: 6px;
+}
+
+.ccm-compare-label,
+.cc-btn-compare {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background: var(--cc-gray-100);
+  border: 1px solid var(--cc-gray-300);
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 500;
+  margin-top: 0.5rem;
+}
+
+.ccm-compare-label:hover,
+.cc-btn-compare:hover {
+  background: var(--cc-primary);
+  color: #fff;
+  border-color: var(--cc-primary);
+}
+
+.ccm-compare-label input,
+.cc-btn-compare input {
+  margin: 0;
+  width: 16px;
+  height: 16px;
+}
+
+/* Buttons */
+.cc-btn,
+.cc-btn-apply,
+.ccm-btn,
+.ccm-btn-primary,
+.ccm-btn-details,
+.ccm-btn-apply {
+  padding: 0.6rem 1rem;
+  background: var(--cc-primary);
+  color: #fff !important;
+  text-decoration: none;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.9rem;
+  text-decoration: none;
+}
+
+.cc-btn:hover,
+.cc-btn-apply:hover,
+.ccm-btn:hover,
+.ccm-btn-primary:hover,
+.ccm-btn-apply:hover {
+  background: var(--cc-dark);
+}
+
+.ccm-btn-details {
+  background: var(--cc-gray-100);
+  color: var(--cc-gray-700);
+}
+
+.ccm-btn-details:hover {
+  background: var(--cc-gray-200);
+}
+
+/* Collapsible */
+.cc-section-header {
+  display: flex;
+  justify-content: space-between;
+  padding: 1rem;
+  background: var(--cc-gray-50);
+  cursor: pointer;
+  border-bottom: 1px solid var(--cc-gray-200);
+}
+
+.cc-section-header h4 {
+  margin: 0;
+  font-size: 1rem;
+  color: var(--cc-gray-800);
+}
+
+.cc-toggle-icon {
+  transition: transform 0.2s;
+}
+
+.cc-section-content {
+  padding: 1rem;
+  display: none;
+  background: #fff;
+  font-size: 0.9rem;
+  color: var(--cc-gray-700);
+}
+
+.cc-section-content ul {
+  margin: 0.5rem 0;
+  padding-left: 0;
+  list-style: none;
+}
+
+.cc-section-content li {
+  padding: 0.25rem 0;
+  font-size: 0.85rem;
+}
+
+/* Comparison Bar */
+.cc-comparison-bar,
+.ccm-comparison-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: #1f2937;
+  color: #fff;
+  padding: 0.75rem;
+  z-index: 999;
+  transform: translateY(100%);
+  transition: transform 0.3s;
+}
+
+.cc-comparison-bar.active,
+.ccm-comparison-bar.active {
+  transform: translateY(0);
+}
+
+.cc-comparison-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+}
+
+.cc-comparison-info {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex: 1;
+  min-width: 150px;
+}
+
+.cc-comparison-actions,
+.ccm-comparison-actions {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.cc-btn-secondary,
+.ccm-btn-secondary {
+  background: transparent;
+  border: 1px solid #fff;
+  padding: 0.5rem 1rem;
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+.cc-btn-secondary:hover,
+.ccm-btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.cc-close-bar,
+.ccm-close-bar {
+  background: transparent;
+  border: none;
+  color: #fff;
+  font-size: 1.5rem;
+  cursor: pointer;
+  padding: 0;
+  min-width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  transition: opacity 0.2s;
+}
+
+.cc-close-bar:hover,
+.ccm-close-bar:hover {
+  opacity: 0.7;
+}
+
+.cc-btn-primary,
+.ccm-btn-primary {
+  background: var(--cc-primary);
+  color: #fff;
+  padding: 0.5rem 1rem;
+  border: none;
+  font-weight: 600;
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+.cc-btn-primary:hover:not(:disabled),
+.ccm-btn-primary:hover:not(:disabled) {
+  background: var(--cc-dark);
+}
+
+.cc-btn-primary:disabled,
+.ccm-btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Grid */
+.ccm-shortcode-grid {
+  width: 100%;
+}
+
+.ccm-filters {
+  background: #fff;
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+  border: 1px solid var(--cc-gray-200);
+  border-radius: 6px;
+}
+
+.ccm-filters select {
+  padding: 0.5rem;
+  border: 1px solid var(--cc-gray-300);
+  border-radius: 4px;
+  font-size: 0.9rem;
+}
+
+.ccm-cards-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.ccm-card {
+  background: #fff;
+  border: 1px solid var(--cc-gray-200);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.ccm-card:hover {
+  border-color: var(--cc-primary);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.ccm-card img {
+  width: 80px;
+  margin: 0.75rem auto;
+  object-fit: contain;
+}
+
+.ccm-card h3 {
+  margin: 0 1rem 0.5rem;
+  font-size: 1rem;
+  color: var(--cc-gray-800);
+  text-align: center;
+}
+
+.ccm-card-rating,
+.ccm-card-meta {
+  padding: 0 1rem;
+  font-size: 0.85rem;
+}
+
+.ccm-card-meta > div {
+  margin-bottom: 0.5rem;
+  padding: 0.5rem;
+  background: var(--cc-gray-50);
+  border-radius: 3px;
+}
+
+.ccm-card-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+  padding: 1rem;
+  border-top: 1px solid var(--cc-gray-200);
+}
+
+.ccm-badge {
+  display: inline-block;
+  padding: 0.2rem 0.5rem;
+  border-radius: 12px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+}
+
+.ccm-badge.ccm-featured {
+  background: var(--cc-warning);
+  color: #fff;
+}
+
+.ccm-badge.ccm-trending {
+  background: var(--cc-success);
+  color: #fff;
+}
+
+.ccm-no-results {
+  grid-column: 1/-1;
+  text-align: center;
+  padding: 2rem;
+  color: var(--cc-gray-600);
+}
+
+/* Mobile */
+@media (max-width: 768px) {
+  .cc-card-content {
+    grid-template-columns: 1fr;
+    padding: 1rem;
+  }
+
+  .cc-card-image {
+    width: 100%;
+  }
+
+  .ccm-cards-container {
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 1rem;
+  }
+
+  .cc-comparison-content {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .cc-comparison-info {
+    font-size: 0.9rem;
+  }
+
+  .cc-comparison-actions {
+    width: 100%;
+    flex-direction: column;
+  }
+
+  .cc-comparison-actions button {
+    width: 100%;
+    padding: 0.6rem;
+    font-size: 0.9rem;
+  }
+
+  .ccm-card-actions {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 480px) {
+  .cc-comparison-bar,
+  .ccm-comparison-bar {
+    padding: 0.5rem;
+  }
+
+  .cc-comparison-content {
+    flex-direction: row;
+    gap: 0.5rem;
+  }
+
+  .cc-comparison-info {
+    gap: 0.5rem;
+    font-size: 0.8rem;
+    flex: 1;
+    min-width: 0;
+  }
+
+  .cc-comparison-info span:first-child {
+    font-size: 1.2rem;
+    flex-shrink: 0;
+  }
+
+  .cc-comparison-actions {
+    gap: 0.3rem;
+    flex-shrink: 0;
+  }
+
+  .cc-comparison-actions button {
+    padding: 0.4rem 0.6rem;
+    font-size: 0.75rem;
+    width: auto;
+  }
+
+  .cc-close-bar,
+  .ccm-close-bar {
+    min-width: 28px;
+    height: 28px;
+    font-size: 1.2rem;
+  }
+
+  .ccm-cards-container {
+    grid-template-columns: 1fr;
+  }
+
+  .cc-card-header,
+  .ccm-card-header {
+    padding: 0.75rem;
+  }
+}

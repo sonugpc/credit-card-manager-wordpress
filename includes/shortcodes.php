@@ -16,6 +16,9 @@ if (!defined('ABSPATH')) {
  * @return string The shortcode output.
  */
 function ccm_register_compare_card_shortcode($atts) {
+    // Enqueue shortcode styles
+    wp_enqueue_style('ccm-shortcodes', CCM_PLUGIN_URL . 'assets/shortcodes.css', array(), CCM_VERSION);
+    
     $atts = shortcode_atts(
         [
             'ids' => '',
@@ -68,6 +71,9 @@ add_shortcode('compare-card', 'ccm_register_compare_card_shortcode');
  * @return string The shortcode output.
  */
 function ccm_register_credit_card_shortcode($atts) {
+    // Enqueue shortcode styles
+    wp_enqueue_style('ccm-shortcodes', CCM_PLUGIN_URL . 'assets/shortcodes.css', array(), CCM_VERSION);
+    
     $atts = shortcode_atts(
         [
             'id' => '',
@@ -427,21 +433,22 @@ function ccm_register_credit_card_shortcode($atts) {
 
     // Add comparison bar if it doesn't exist
     if (!wp_script_is('comparison-bar-added')) {
-        echo '<div class="cc-comparison-bar" id="comparison-bar" style="position: fixed; bottom: 0; left: 0; right: 0; background-color: var(--cc-gray-800); color: var(--cc-white); padding: 1rem; z-index: 100; box-shadow: var(--cc-shadow-lg); transform: translateY(100%); transition: transform 0.3s ease;">
-            <div class="cc-comparison-content" style="max-width: 1200px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between;">
-                <div class="cc-comparison-info" style="display: flex; align-items: center; gap: 1rem;">
+        echo '<div class="cc-comparison-bar" id="comparison-bar">
+            <div class="cc-comparison-content">
+                <div class="cc-comparison-info">
                     <span style="font-size: 1.2em;">⚖️</span>
                     <div>
-                        <span id="selected-count">0</span> cards selected for comparison
+                        <span id="selected-count">0</span> cards selected
                     </div>
                 </div>
-                <div class="cc-comparison-actions" style="display: flex; gap: 0.75rem;">
-                    <button type="button" class="cc-btn cc-btn-secondary" id="clear-comparison" style="padding: 0.5rem 1rem; background: transparent; color: var(--cc-white); border: 1px solid var(--cc-gray-300);" onclick="ccClearComparison()">
+                <div class="cc-comparison-actions">
+                    <button type="button" class="cc-btn cc-btn-secondary" id="clear-comparison" onclick="ccClearComparison()">
                         Clear All
                     </button>
-                    <button type="button" class="cc-btn cc-btn-primary" id="compare-now" disabled style="padding: 0.5rem 1rem; background: var(--cc-blue-600); color: var(--cc-white); border: none;" onclick="ccHandleCompareNow()">
+                    <button type="button" class="cc-btn cc-btn-primary" id="compare-now" disabled onclick="ccHandleCompareNow()">
                         Compare Now
                     </button>
+                    <button type="button" class="cc-close-bar" id="close-comparison" onclick="ccCloseBar()" title="Close">×</button>
                 </div>
             </div>
         </div>';
@@ -637,6 +644,14 @@ function ccm_register_credit_card_shortcode($atts) {
             }
         }
     }
+
+    // Handle close comparison bar
+    function ccCloseBar() {
+        const comparisonBar = document.getElementById('comparison-bar');
+        if (comparisonBar) {
+            comparisonBar.classList.remove('active');
+        }
+    }
     </script>
     <?php
     return ob_get_clean();
@@ -650,6 +665,9 @@ add_shortcode('credit-card', 'ccm_register_credit_card_shortcode');
  * @return string The shortcode output.
  */
 function ccm_register_credit_card_grid_shortcode($atts) {
+    // Enqueue shortcode styles
+    wp_enqueue_style('ccm-shortcodes', CCM_PLUGIN_URL . 'assets/shortcodes.css', array(), CCM_VERSION);
+    
     $atts = shortcode_atts(
         [
             'count' => '6',

@@ -55,13 +55,6 @@ function ccm_register_compare_card_shortcode($atts) {
         wp_reset_postdata();
     }
 
-    wp_enqueue_style(
-        'credit-card-compare',
-        plugin_dir_url(__FILE__) . '../assets/compare.css',
-        [],
-        '1.0.0'
-    );
-
     ob_start();
     include(plugin_dir_path(__FILE__) . '../templates/template-parts/compare-table.php');
     return ob_get_clean();
@@ -133,10 +126,8 @@ function ccm_register_credit_card_shortcode($atts) {
     $networks = wp_get_post_terms($card_id, 'network-type', array('fields' => 'names'));
     $card_data['network'] = !empty($networks) ? $networks[0] : '';
 
-    // Enqueue existing CSS and JS
-    wp_enqueue_style('credit-card-frontend', plugin_dir_url(__FILE__) . '../assets/frontend.css', [], CCM_VERSION);
-    wp_enqueue_script('credit-card-frontend', plugin_dir_url(__FILE__) . '../assets/frontend.js', ['jquery'], CCM_VERSION, true);
-
+    // Note: CSS is included inline in the shortcode output
+    
     ob_start();
     
     if ($atts['mode'] === 'mini') {
@@ -914,13 +905,6 @@ function ccm_register_credit_card_grid_shortcode($atts) {
     }
     </style>
     <?php
-
-    wp_enqueue_style(
-        'credit-card-grid',
-        plugin_dir_url(__FILE__) . '../assets/frontend.css',
-        [],
-        CCM_VERSION
-    );
 
     // Add JavaScript for comparison functionality
     ?>

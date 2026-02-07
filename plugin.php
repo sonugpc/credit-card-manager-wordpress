@@ -21,6 +21,9 @@ require_once plugin_dir_path(__FILE__) . 'includes/config.php';
 // Include Helper Functions
 require_once CCM_PLUGIN_DIR . 'includes/helper-functions.php';
 
+// Include Shortcodes
+require_once CCM_PLUGIN_DIR . 'includes/shortcodes.php';
+
 // Include Core Classes
 require_once CCM_PLUGIN_DIR . 'includes/class-plugin-core.php';
 

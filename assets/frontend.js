@@ -58,15 +58,18 @@
 
         btn.classList.toggle("active", isSelected);
 
-        // Update button text and icon
-        if (isSelected) {
-          btn.innerHTML = btn.innerHTML.replace("Compare", "Remove");
-          btn.querySelector("svg").outerHTML =
-            '<svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line></svg>';
-        } else {
-          btn.innerHTML = btn.innerHTML.replace("Remove", "Compare");
-          btn.querySelector("svg").outerHTML =
-            '<svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line><line x1="6" y1="8" x2="6" y2="4"></line></svg>';
+        // Update button text and icon (only for buttons with SVG)
+        const svgElement = btn.querySelector("svg");
+        if (svgElement) {
+          if (isSelected) {
+            btn.innerHTML = btn.innerHTML.replace("Compare", "Remove");
+            svgElement.outerHTML =
+              '<svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line></svg>';
+          } else {
+            btn.innerHTML = btn.innerHTML.replace("Remove", "Compare");
+            svgElement.outerHTML =
+              '<svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line><line x1="6" y1="8" x2="6" y2="4"></line></svg>';
+          }
         }
       });
 
@@ -123,11 +126,12 @@
     if (compareNowBtn) {
       compareNowBtn.addEventListener("click", function () {
         if (selectedCards.length >= 2) {
-          const archiveUrl =
-            document
-              .querySelector(".cc-archive-container")
-              .getAttribute("data-archive-url") ||
-            window.location.href.split("?")[0];
+          const archiveContainer = document.querySelector(
+            ".cc-archive-container",
+          );
+          const archiveUrl = archiveContainer
+            ? archiveContainer.getAttribute("data-archive-url")
+            : window.location.href.split("?")[0];
           const compareUrl = `${archiveUrl}?compare=${selectedCards.join(",")}`;
           window.location.href = compareUrl;
         }
@@ -149,17 +153,21 @@
       toggleBtn.addEventListener("click", function () {
         const isVisible = filterContent.style.display !== "none";
         filterContent.style.display = isVisible ? "none" : "grid";
-        toggleBtn.querySelector("span").textContent = isVisible
-          ? "Show Filters"
-          : "Hide Filters";
+        const spanEl = toggleBtn.querySelector("span");
+        if (spanEl) {
+          spanEl.textContent = isVisible ? "Show Filters" : "Hide Filters";
+        }
 
-        // Update icon
-        if (isVisible) {
-          toggleBtn.querySelector("svg").outerHTML =
-            '<svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>';
-        } else {
-          toggleBtn.querySelector("svg").outerHTML =
-            '<svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line></svg>';
+        // Update icon (only if SVG exists)
+        const svgElement = toggleBtn.querySelector("svg");
+        if (svgElement) {
+          if (isVisible) {
+            svgElement.outerHTML =
+              '<svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>';
+          } else {
+            svgElement.outerHTML =
+              '<svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line></svg>';
+          }
         }
       });
     }
@@ -211,6 +219,4 @@
       });
     }
   }
-
- 
 })(jQuery);

@@ -24,6 +24,9 @@ require_once CCM_PLUGIN_DIR . 'includes/helper-functions.php';
 // Include Shortcodes
 require_once CCM_PLUGIN_DIR . 'includes/shortcodes.php';
 
+// Include API Functions
+require_once CCM_PLUGIN_DIR . 'includes/api.php';
+
 // Include Core Classes
 require_once CCM_PLUGIN_DIR . 'includes/class-plugin-core.php';
 

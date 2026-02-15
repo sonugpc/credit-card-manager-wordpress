@@ -86,7 +86,12 @@ class CreditCardManager_Frontend {
     /**
      * Filter REST API for default WordPress endpoints
      */
-    public function filter_rest_api($args, $request) {
+    public function filter_rest_api($args, $request = null) {
+        // If no request object, return args unchanged
+        if (!$request) {
+            return $args;
+        }
+        
         $params = $request->get_params();
 
         // Filter by bank (store taxonomy)
